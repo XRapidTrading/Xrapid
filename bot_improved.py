@@ -10,7 +10,7 @@ from xrp_sniper_logic_improved import XRPSniper
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpx" ).setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -78,12 +78,12 @@ async def snipe_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     current_settings = sniper.snipe_settings.get(user_id, {})
 
     keyboard = [
-        [InlineKeyboardButton(f"Buy Amount XRP: {current_settings.get('buy_amount_xrp', 'Not Set')}", callback_data="set_buy_amount_xrp")],
-        [InlineKeyboardButton(f"Slippage: {current_settings.get('slippage', 'Not Set')}", callback_data="set_slippage")],
-        [InlineKeyboardButton(f"Target Issuer: {current_settings.get('target_issuer', 'Not Set')}", callback_data="set_target_issuer")],
-        [InlineKeyboardButton(f"Target Currency: {current_settings.get('target_currency', 'Not Set')}", callback_data="set_target_currency")],
-        [InlineKeyboardButton(f"Dev Wallet Address: {current_settings.get('dev_wallet_address', 'Not Set')}", callback_data="set_dev_wallet_address")],
-        [InlineKeyboardButton(f"AFK Mode: {'Active' if current_settings.get('afk_mode') else 'Inactive'}", callback_data="toggle_afk_mode")],
+        [InlineKeyboardButton(f"Buy Amount XRP: {current_settings.get("buy_amount_xrp", "Not Set")}", callback_data="set_buy_amount_xrp")],
+        [InlineKeyboardButton(f"Slippage: {current_settings.get("slippage", "Not Set")}", callback_data="set_slippage")],
+        [InlineKeyboardButton(f"Target Issuer: {current_settings.get("target_issuer", "Not Set")}", callback_data="set_target_issuer")],
+        [InlineKeyboardButton(f"Target Currency: {current_settings.get("target_currency", "Not Set")}", callback_data="set_target_currency")],
+        [InlineKeyboardButton(f"Dev Wallet Address: {current_settings.get("dev_wallet_address", "Not Set")}", callback_data="set_dev_wallet_address")],
+        [InlineKeyboardButton(f"AFK Mode: {"Active" if current_settings.get("afk_mode") else "Inactive"}", callback_data="toggle_afk_mode")],
         [InlineKeyboardButton("Back to Main Menu", callback_data="start")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -385,8 +385,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await update.message.reply_text("I'm not sure what you mean. Use the menu to see available actions.")
 
-
-async def main() -> None:
+def main() -> None:
     """Start the bot and set up the menu commands."""
     # Get the bot token from environment variables
     BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -398,7 +397,9 @@ async def main() -> None:
     application = Application.builder().token(BOT_TOKEN).build()
 
     # Set the bot's commands (the menu button)
-    await application.bot.set_my_commands([
+    # This needs to be an async call, so we run it in the event loop
+    # that application.run_polling will create.
+    application.loop.run_until_complete(application.bot.set_my_commands([
         ("start", "Start the bot and show the main menu"),
         ("help", "Show the help message"),
         ("setup_wallet", "Set up your XRP Ledger wallet"),
@@ -408,7 +409,7 @@ async def main() -> None:
         ("my_wallet", "View your connected wallet details"),
         ("my_settings", "View your current sniping settings"),
         ("my_positions", "View your current token holdings"),
-    ])
+    ]))
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
@@ -432,4 +433,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
