@@ -385,21 +385,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await update.message.reply_text("I'm not sure what you mean. Use the menu to see available actions.")
 
-def main() -> None:
-    """Start the bot and set up the menu commands."""
-    # Get the bot token from environment variables
-    BOT_TOKEN = os.getenv("BOT_TOKEN")
-    if not BOT_TOKEN:
-        logger.error("BOT_TOKEN environment variable not set!")
-        return
-
-    # Create the Application and pass it your bot's token.
-    application = Application.builder().token(BOT_TOKEN).build()
-
-    # Set the bot's commands (the menu button)
-    # This needs to be an async call, so we run it in the event loop
-    # that application.run_polling will create.
-    application.loop.run_until_complete(application.bot.set_my_commands([
+async def post_init(application: Application) -> None:
+    """Runs once after the bot is started and before polling starts."""
+    await application.bot.set_my_commands([
         ("start", "Start the bot and show the main menu"),
         ("help", "Show the help message"),
         ("setup_wallet", "Set up your XRP Ledger wallet"),
@@ -409,7 +397,19 @@ def main() -> None:
         ("my_wallet", "View your connected wallet details"),
         ("my_settings", "View your current sniping settings"),
         ("my_positions", "View your current token holdings"),
-    ]))
+    ])
+    logger.info("Bot commands set successfully!")
+
+def main() -> None:
+    """Start the bot."""
+    # Get the bot token from environment variables
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    if not BOT_TOKEN:
+        logger.error("BOT_TOKEN environment variable not set!")
+        return
+
+    # Create the Application and pass it your bot's token.
+    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
