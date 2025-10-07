@@ -1,7 +1,7 @@
 import logging
 import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MenuButtonCommands
-import telegram
+import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from xrpl_client import generate_new_wallet, import_wallet, get_account_info
 from xrp_sniper_logic_improved import XRPSniper
@@ -16,47 +16,6 @@ logger = logging.getLogger(__name__)
 
 # Global sniper instance
 sniper = XRPSniper()
-
-async def main() -> None:
-    """Start the bot and set up the menu commands."""
-    # Create the Application and pass it your bot's token.
-    application = Application.builder().token(BOT_TOKEN).build()
-
-    # Set the bot's commands (the menu button)
-    await application.bot.set_my_commands([
-        ("start", "Start the bot and show the main menu"),
-        ("setup_wallet", "Set up your XRP Ledger wallet"),
-        ("snipe_settings", "Configure your token sniping settings"),
-        ("start_snipe", "Start the automated sniping process"),
-        ("stop_snipe", "Stop the automated sniping process"),
-        ("my_wallet", "View your connected wallet details"),
-        ("my_settings", "View your current sniping settings"),
-        ("my_positions", "View your current token holdings"),
-        ("help", "Show the help message"),
-    ])
-
-    # on different commands - answer in Telegram
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("setup_wallet", setup_wallet))
-    application.add_handler(CommandHandler("snipe_settings", snipe_settings))
-    application.add_handler(CommandHandler("start_snipe", start_snipe))
-    application.add_handler(CommandHandler("stop_snipe", stop_snipe))
-    application.add_handler(CommandHandler("my_wallet", my_wallet))
-    application.add_handler(CommandHandler("my_settings", my_settings))
-    application.add_handler(CommandHandler("my_positions", my_positions))
-
-    # Callback query handler for inline buttons
-    application.add_handler(CallbackQueryHandler(button))
-
-    # Message handler for text inputs
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Run the bot until the user presses Ctrl-C
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-if __name__ == "__main__":
-    asyncio.run(main())
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued, displaying a main menu."""
@@ -387,47 +346,71 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     elif query.data == "help":
         await help_command(update, context)
 
-async def handle_seed_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles user input for wallet seed."""
-    if not context.user_data.get("awaiting_seed_input"):
-        return
-
-    user_id = update.effective_user.id
-    seed = update.message.text.strip()
-    try:
-        imported_wallet_data = import_wallet(seed)
-
-        if "error" not in imported_wallet_data:
-            sniper.add_wallet(user_id, imported_wallet_data)
-            await update.message.reply_text(
-                f"Wallet imported successfully! Address: `{imported_wallet_data['address']}`\nUse /my_wallet to view details.",
-                parse_mode="MarkdownV2"
-            )
-        else:
-            await update.message.reply_text(f"Error importing wallet: {imported_wallet_data['error']}")
-    except Exception as e:
-        await update.message.reply_text(f"Error importing wallet: {e}")
-    finally:
-        context.user_data["awaiting_seed_input"] = False
-
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles all text messages."""
+    """Handle regular text messages for various inputs."""
+    user_id = update.effective_user.id
+    message_text = update.message.text
+
     if context.user_data.get("awaiting_seed_input"):
-        await handle_seed_input(update, context)
+        seed = message_text.strip()
+        try:
+            imported_wallet = await import_wallet(seed)
+            if "error" not in imported_wallet:
+                sniper.add_wallet(user_id, imported_wallet)
+                await update.message.reply_text(
+                    f"Wallet imported successfully! Address: `{imported_wallet['address']}`",
+                    parse_mode="MarkdownV2"
+                )
+            else:
+                await update.message.reply_text(f"Error importing wallet: {imported_wallet['error']}")
+        except Exception as e:
+            await update.message.reply_text(f"An unexpected error occurred: {e}")
+        finally:
+            context.user_data["awaiting_seed_input"] = False
+
     elif context.user_data.get("awaiting_specific_snipe_setting"):
         await handle_specific_snipe_setting_input(update, context)
-    # Add handlers for buy/sell token inputs if needed
+
+    elif context.user_data.get("awaiting_buy_token_input"):
+        # Logic to handle buy token input
+        # Example: parse message_text and execute buy
+        await update.message.reply_text("Buy functionality is being processed...")
+        context.user_data["awaiting_buy_token_input"] = False
+
+    elif context.user_data.get("awaiting_sell_token_input"):
+        # Logic to handle sell token input
+        # Example: parse message_text and execute sell
+        await update.message.reply_text("Sell functionality is being processed...")
+        context.user_data["awaiting_sell_token_input"] = False
+    else:
+        await update.message.reply_text("I'm not sure what you mean. Use the menu to see available actions.")
 
 
-def main() -> None:
-    """Start the bot."""
-    # Replace with your actual bot token
-    BOT_TOKEN = "8212024011:AAEbcnAIRwEBDb8QbUMUHo_feS5vnZEFwck"
+async def main() -> None:
+    """Start the bot and set up the menu commands."""
+    # Get the bot token from environment variables
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    if not BOT_TOKEN:
+        logger.error("BOT_TOKEN environment variable not set!")
+        return
 
+    # Create the Application and pass it your bot's token.
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # Command handlers
+    # Set the bot's commands (the menu button)
+    await application.bot.set_my_commands([
+        ("start", "Start the bot and show the main menu"),
+        ("help", "Show the help message"),
+        ("setup_wallet", "Set up your XRP Ledger wallet"),
+        ("snipe_settings", "Configure your token sniping settings"),
+        ("start_snipe", "Start the automated sniping process"),
+        ("stop_snipe", "Stop the automated sniping process"),
+        ("my_wallet", "View your connected wallet details"),
+        ("my_settings", "View your current sniping settings"),
+        ("my_positions", "View your current token holdings"),
+    ])
+
+    # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("setup_wallet", setup_wallet))
@@ -449,4 +432,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
