@@ -3,21 +3,28 @@ from xrpl.wallet import generate_faucet_wallet, Wallet
 from xrpl.clients import JsonRpcClient
 from xrpl.models import Payment, TrustSet, IssuedCurrencyAmount
 from xrpl.transaction import submit_and_wait
+import asyncio # Import asyncio for timeout
 
 # Initialize the XRP Ledger client (using a testnet for development)
 JSON_RPC_URL = "https://s.altnet.rippletest.net:51234/"
-client = JsonRpcClient(JSON_RPC_URL)
+client = JsonRpcClient(JSON_RPC_URL )
 
 async def generate_new_wallet():
     """Generates a new XRP Ledger wallet and funds it on the testnet."""
-    test_wallet = await generate_faucet_wallet(client)
+    try:
+        # Add a timeout to prevent indefinite hanging if the faucet is unresponsive
+        test_wallet = await asyncio.wait_for(generate_faucet_wallet(client), timeout=30)
 
-    return {
-        "address": test_wallet.classic_address,
-        "seed": test_wallet.seed,
-        "public_key": test_wallet.public_key,
-        "private_key": test_wallet.private_key,
-    }
+        return {
+            "address": test_wallet.classic_address,
+            "seed": test_wallet.seed,
+            "public_key": test_wallet.public_key,
+            "private_key": test_wallet.private_key,
+        }
+    except asyncio.TimeoutError:
+        return {"error": "XRP Ledger faucet timed out. Please try again later."}
+    except Exception as e:
+        return {"error": f"Failed to generate wallet: {e}"}
 
 def import_wallet(seed: str):
     """Imports an existing XRP Ledger wallet from a seed."""
@@ -76,35 +83,24 @@ def set_trustline(sender_seed: str, currency_code: str, issuer_address: str, lim
 # Example Usage (for testing purposes)
 if __name__ == "__main__":
     print("Generating a new wallet...")
-    new_wallet = generate_new_wallet()
-    print(f"New Wallet Address: {new_wallet['address']}")
-    print(f"New Wallet Seed: {new_wallet['seed']}")
+    # This part needs to be run in an async context if generate_new_wallet is async
+    async def test_generate_wallet():
+        new_wallet = await generate_new_wallet()
+        if "error" not in new_wallet:
+            print(f"New Wallet Address: {new_wallet["address"]}")
+            print(f"New Wallet Seed: {new_wallet["seed"]}")
 
-    print("\nGetting account info for the new wallet...")
-    account_info = get_account_info(new_wallet['address'])
-    print(account_info)
+            print("\nGetting account info for the new wallet...")
+            account_info = get_account_info(new_wallet["address"])
+            print(account_info)
 
-    # To test sending XRP, you would need another funded wallet.
-    # For demonstration, let's assume we have a second wallet seed.
-    # print("\nImporting a second wallet (replace with a real seed for testing send_xrp)...")
-    # second_wallet_seed = "sEdxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    # second_wallet = import_wallet(second_wallet_seed)
-    # if "error" not in second_wallet:
-    #     print(f"Second Wallet Address: {second_wallet['address']}")
-    #     print("\nSending 10 XRP from new_wallet to second_wallet...")
-    #     send_result = send_xrp(new_wallet['seed'], second_wallet['address'], 10)
-    #     print(send_result)
-    # else:
-    #     print(f"Error importing second wallet: {second_wallet['error']}")
+            print("\nSetting a trustline (example for a hypothetical token)... ")
+            try:
+                trustline_result = set_trustline(new_wallet["seed"], "USD", "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k3l3m3n")
+                print(trustline_result)
+            except Exception as e:
+                print(f"Error setting trustline: {e}")
+        else:
+            print(f"Error: {new_wallet["error"]}")
 
-    print("\nSetting a trustline (example for a hypothetical token)... ")
-    # Replace with actual token details for a real test
-    # Note: Setting a trustline requires the account to have enough XRP for reserves.
-    # This example uses a placeholder for currency and issuer.
-    # You would typically set a trustline for a specific token you intend to trade.
-    try:
-        trustline_result = set_trustline(new_wallet['seed'], "USD", "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k3l3m3n")
-        print(trustline_result)
-    except Exception as e:
-        print(f"Error setting trustline: {e}")
-
+    asyncio.run(test_generate_wallet())
