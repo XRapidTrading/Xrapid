@@ -3,6 +3,7 @@ import asyncio
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
+# Import the async version of generate_new_wallet directly
 from xrpl_client import generate_new_wallet, import_wallet, get_account_info
 from xrp_sniper_logic_improved import XRPSniper
 
@@ -297,6 +298,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if query.data == "start":
         await start(update, context)
     elif query.data == "generate_wallet":
+        # Call the async version directly and await it
         new_wallet_data = await generate_new_wallet()
         if "error" not in new_wallet_data:
             sniper.add_wallet(user_id, new_wallet_data)
@@ -354,7 +356,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if context.user_data.get("awaiting_seed_input"):
         seed = message_text.strip()
         try:
-            imported_wallet = await import_wallet(seed)
+            imported_wallet = import_wallet(seed) # import_wallet is synchronous
             if "error" not in imported_wallet:
                 sniper.add_wallet(user_id, imported_wallet)
                 await update.message.reply_text(
