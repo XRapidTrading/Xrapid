@@ -17,6 +17,47 @@ logger = logging.getLogger(__name__)
 # Global sniper instance
 sniper = XRPSniper()
 
+async def main() -> None:
+    """Start the bot and set up the menu commands."""
+    # Create the Application and pass it your bot's token.
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    # Set the bot's commands (the menu button)
+    await application.bot.set_my_commands([
+        ("start", "Start the bot and show the main menu"),
+        ("setup_wallet", "Set up your XRP Ledger wallet"),
+        ("snipe_settings", "Configure your token sniping settings"),
+        ("start_snipe", "Start the automated sniping process"),
+        ("stop_snipe", "Stop the automated sniping process"),
+        ("my_wallet", "View your connected wallet details"),
+        ("my_settings", "View your current sniping settings"),
+        ("my_positions", "View your current token holdings"),
+        ("help", "Show the help message"),
+    ])
+
+    # on different commands - answer in Telegram
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("setup_wallet", setup_wallet))
+    application.add_handler(CommandHandler("snipe_settings", snipe_settings))
+    application.add_handler(CommandHandler("start_snipe", start_snipe))
+    application.add_handler(CommandHandler("stop_snipe", stop_snipe))
+    application.add_handler(CommandHandler("my_wallet", my_wallet))
+    application.add_handler(CommandHandler("my_settings", my_settings))
+    application.add_handler(CommandHandler("my_positions", my_positions))
+
+    # Callback query handler for inline buttons
+    application.add_handler(CallbackQueryHandler(button))
+
+    # Message handler for text inputs
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    # Run the bot until the user presses Ctrl-C
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued, displaying a main menu."""
     user = update.effective_user
