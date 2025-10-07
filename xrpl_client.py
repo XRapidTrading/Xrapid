@@ -7,7 +7,7 @@ import asyncio # Import asyncio for timeout
 
 # Initialize the XRP Ledger client (using a testnet for development)
 JSON_RPC_URL = "https://s.altnet.rippletest.net:51234/"
-client = JsonRpcClient(JSON_RPC_URL )
+client = JsonRpcClient(JSON_RPC_URL)
 
 async def generate_new_wallet():
     """Generates a new XRP Ledger wallet and funds it on the testnet."""
