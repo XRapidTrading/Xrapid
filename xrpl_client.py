@@ -13,6 +13,7 @@ async def generate_new_wallet():
     """Generates a new XRP Ledger wallet and funds it on the testnet."""
     try:
         # Add a timeout to prevent indefinite hanging if the faucet is unresponsive
+        # The generate_faucet_wallet call itself is async and needs to be awaited
         test_wallet = await asyncio.wait_for(generate_faucet_wallet(client), timeout=30)
 
         return {
@@ -24,6 +25,7 @@ async def generate_new_wallet():
     except asyncio.TimeoutError:
         return {"error": "XRP Ledger faucet timed out. Please try again later."}
     except Exception as e:
+        # Removed asyncio.run() from here, as it's already in an event loop
         return {"error": f"Failed to generate wallet: {e}"}
 
 def import_wallet(seed: str):
