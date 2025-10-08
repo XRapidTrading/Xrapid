@@ -28,6 +28,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     keyboard = [
         [InlineKeyboardButton("📊 Positions", callback_data="positions_menu")],
+        [InlineKeyboardButton("💰 Buy", callback_data="buy_menu")],
         [InlineKeyboardButton("🎯 Sniper", callback_data="sniper_menu")],
         [InlineKeyboardButton("⚙️ Settings", callback_data="settings_menu")],
     ]
@@ -48,6 +49,138 @@ async def positions_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     reply_markup = InlineKeyboardMarkup(keyboard)
     message_text = "Here you can view and manage your token positions."
     await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+async def buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Displays the buy menu and prompts for contract address."""
+    keyboard = [
+        [InlineKeyboardButton("↩️ Back to Main Menu", callback_data="start")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = "💰 **Buy Token**\n\nPlease paste the token's **Contract Address (CA)** or **Issuer Address** to view details and buy.\n\n_Format: Issuer Address_"
+    
+    # Set the awaiting input flag
+    context.user_data["awaiting_input"] = "buy_token_ca"
+    
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+
+async def process_buy_token_ca(update: Update, context: ContextTypes.DEFAULT_TYPE, ca: str) -> None:
+    """Process the contract address and show token details with buy options."""
+    user_id = update.effective_user.id
+    
+    # Validate the address format (basic check)
+    if not ca or len(ca) < 25:
+        await update.message.reply_text("❌ Invalid address format. Please provide a valid XRPL issuer address.")
+        return
+    
+    # For XRPL, we need both currency code and issuer
+    # Ask for currency code
+    context.user_data["awaiting_input"] = "buy_token_currency"
+    context.user_data["buy_token_issuer"] = ca
+    
+    await update.message.reply_text(
+        f"✅ Issuer address received: `{ca}`\n\n"
+        f"Now please send the **Currency Code** (ticker) for this token.\n"
+        f"_Example: USD, BTC, MYTOKEN_",
+        parse_mode="Markdown"
+    )
+
+async def show_token_buy_options(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str) -> None:
+    """Show token details and buy preset buttons."""
+    user_id = update.effective_user.id
+    
+    # Get token info from order book
+    try:
+        offers = sniper.get_order_book("XRP", None, currency, issuer)
+        
+        if offers:
+            first_offer = offers[0]
+            taker_gets = first_offer.get("TakerGets")
+            taker_pays = first_offer.get("TakerPays")
+            
+            if isinstance(taker_gets, dict) and isinstance(taker_pays, str):
+                token_amount = float(taker_gets.get("value", 0))
+                xrp_amount = float(taker_pays) / 1_000_000
+                
+                if xrp_amount > 0:
+                    rate = token_amount / xrp_amount
+                    price_info = f"💱 **Price:** {rate:.6f} {currency} per XRP\n"
+                    price_info += f"📊 **Available:** {token_amount:.2f} {currency} for {xrp_amount:.2f} XRP\n\n"
+                else:
+                    price_info = "⚠️ Unable to determine price from order book.\n\n"
+            else:
+                price_info = "⚠️ Unable to determine price from order book.\n\n"
+        else:
+            price_info = "⚠️ No active offers found in order book.\n\n"
+    except Exception as e:
+        logger.error(f"Error fetching token info: {e}")
+        price_info = "⚠️ Error fetching token information.\n\n"
+    
+    # Create buy preset buttons
+    keyboard = [
+        [InlineKeyboardButton("25 XRP", callback_data=f"execute_buy_{currency}_{issuer}_25")],
+        [InlineKeyboardButton("50 XRP", callback_data=f"execute_buy_{currency}_{issuer}_50")],
+        [InlineKeyboardButton("100 XRP", callback_data=f"execute_buy_{currency}_{issuer}_100")],
+        [InlineKeyboardButton("250 XRP", callback_data=f"execute_buy_{currency}_{issuer}_250")],
+        [InlineKeyboardButton("500 XRP", callback_data=f"execute_buy_{currency}_{issuer}_500")],
+        [InlineKeyboardButton("🔢 Custom Amount", callback_data=f"custom_buy_{currency}_{issuer}")],
+        [InlineKeyboardButton("↩️ Back to Buy Menu", callback_data="buy_menu")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message_text = f"💰 **Token Details**\n\n"
+    message_text += f"🏷️ **Currency:** {currency}\n"
+    message_text += f"🏦 **Issuer:** `{issuer}`\n\n"
+    message_text += price_info
+    message_text += "Select an amount to buy:"
+    
+    await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+
+async def execute_buy_from_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str, amount_xrp: float) -> None:
+    """Execute a buy order from the buy menu."""
+    user_id = update.effective_user.id
+    
+    # Check if user has a wallet
+    if user_id not in sniper.wallets:
+        await update.callback_query.answer("❌ No wallet configured! Please set up a wallet in Settings first.", show_alert=True)
+        return
+    
+    await update.callback_query.answer(f"🔄 Buying {amount_xrp} XRP worth of {currency}...")
+    await update.callback_query.edit_message_text(f"⏳ Processing buy order for {amount_xrp} XRP worth of {currency}...\n\nPlease wait...")
+    
+    # Get default slippage or use 1%
+    default_settings = sniper.default_trade_settings.get(user_id, {})
+    slippage = default_settings.get("slippage", 1.0) / 100  # Convert to decimal
+    mev_protect = sniper.get_mev_protection_status(user_id)
+    
+    # Execute the buy order
+    success = await sniper._execute_buy_order(user_id, currency, issuer, amount_xrp, slippage, mev_protect)
+    
+    if success:
+        message_text = f"✅ **Buy Order Successful!**\n\n"
+        message_text += f"💰 Bought {amount_xrp} XRP worth of {currency}\n"
+        message_text += f"🏦 Issuer: `{issuer}`\n\n"
+        message_text += "Check your positions to see your new balance!"
+    else:
+        message_text = f"❌ **Buy Order Failed**\n\n"
+        message_text += f"Could not complete the purchase of {currency}.\n"
+        message_text += "Please check your wallet balance and try again."
+    
+    keyboard = [
+        [InlineKeyboardButton("💰 View Positions", callback_data="view_positions")],
+        [InlineKeyboardButton("🔄 Buy More", callback_data="buy_menu")],
+        [InlineKeyboardButton("↩️ Main Menu", callback_data="start")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+
+async def custom_buy_amount_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str) -> None:
+    """Prompt user to enter a custom buy amount."""
+    context.user_data["awaiting_input"] = f"custom_buy_amount_{currency}_{issuer}"
+    await update.callback_query.edit_message_text(
+        f"Please send the amount of XRP you want to spend on {currency}.\n\n_Example: 75, 150, 1000_",
+        parse_mode="Markdown"
+    )
 
 async def sniper_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Displays the sniper menu with list of saved configs."""
@@ -534,8 +667,45 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if awaiting_input and message_text:
         try:
-
-            if awaiting_input == "add_buy_preset":
+            if awaiting_input == "buy_token_ca":
+                # Process the contract address (issuer)
+                await process_buy_token_ca(update, context, message_text.strip())
+            elif awaiting_input == "buy_token_currency":
+                # Process the currency code
+                issuer = context.user_data.get("buy_token_issuer")
+                if issuer:
+                    currency = message_text.strip().upper()
+                    context.user_data.pop("buy_token_issuer", None)
+                    context.user_data.pop("awaiting_input", None)
+                    await show_token_buy_options(update, context, currency, issuer)
+                else:
+                    await update.message.reply_text("❌ Error: Issuer address not found. Please start over.")
+            elif awaiting_input.startswith("custom_buy_amount_"):
+                # Handle custom buy amount from buy menu
+                parts = awaiting_input.replace("custom_buy_amount_", "").split("_", 1)
+                if len(parts) == 2:
+                    currency = parts[0]
+                    issuer = parts[1]
+                    amount = float(message_text)
+                    if amount <= 0:
+                        await update.message.reply_text("Amount must be positive.")
+                        return
+                    context.user_data.pop("awaiting_input", None)
+                    await update.message.reply_text(f"⏳ Processing buy order for {amount} XRP worth of {currency}...")
+                    
+                    # Get default slippage or use 1%
+                    default_settings = sniper.default_trade_settings.get(user_id, {})
+                    slippage = default_settings.get("slippage", 1.0) / 100
+                    mev_protect = sniper.get_mev_protection_status(user_id)
+                    
+                    # Execute the buy order
+                    success = await sniper._execute_buy_order(user_id, currency, issuer, amount, slippage, mev_protect)
+                    
+                    if success:
+                        await update.message.reply_text(f"✅ Successfully bought {amount} XRP worth of {currency}!")
+                    else:
+                        await update.message.reply_text(f"❌ Failed to buy {currency}. Check your wallet balance and try again.")
+            elif awaiting_input == "add_buy_preset":
                 amount = float(message_text)
                 if amount <= 0:
                     await update.message.reply_text("Amount must be positive.")
@@ -663,6 +833,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await start(update, context)
         elif data == "positions_menu":
             await positions_menu(update, context)
+        elif data == "buy_menu":
+            await buy_menu(update, context)
+        elif data.startswith("execute_buy_") and not data.startswith("execute_buy_amount"):
+            # Handle execute_buy_{currency}_{issuer}_{amount}
+            parts = data.replace("execute_buy_", "").rsplit("_", 1)
+            if len(parts) == 2:
+                currency_issuer = parts[0]
+                amount = float(parts[1])
+                # Split currency and issuer
+                currency_issuer_parts = currency_issuer.split("_", 1)
+                if len(currency_issuer_parts) == 2:
+                    currency = currency_issuer_parts[0]
+                    issuer = currency_issuer_parts[1]
+                    await execute_buy_from_menu(update, context, currency, issuer, amount)
+        elif data.startswith("custom_buy_"):
+            # Handle custom_buy_{currency}_{issuer}
+            parts = data.replace("custom_buy_", "").split("_", 1)
+            if len(parts) == 2:
+                currency = parts[0]
+                issuer = parts[1]
+                await custom_buy_amount_prompt(update, context, currency, issuer)
         elif data == "sniper_menu":
             await sniper_menu(update, context)
         elif data == "settings_menu":
