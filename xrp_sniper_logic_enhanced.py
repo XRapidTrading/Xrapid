@@ -530,6 +530,44 @@ class XRPSniper:
             logger.error(f"Error getting account info for {address}: {e}")
             return {"error": str(e)}
 
+    def get_issued_currencies(self, issuer_address: str) -> list:
+        """Gets all currencies issued by a specific address using gateway_balances."""
+        try:
+            request = xrpl.models.requests.GatewayBalances(
+                account=issuer_address,
+                ledger_index="validated"
+            )
+            response = client.request(request)
+            
+            if response.is_successful():
+                result = response.result
+                currencies = set()
+                
+                # Get currencies from obligations (total issued)
+                obligations = result.get("obligations", {})
+                for currency in obligations.keys():
+                    currencies.add(currency)
+                
+                # Get currencies from balances (hot wallets)
+                balances = result.get("balances", {})
+                for address, balance_list in balances.items():
+                    for balance in balance_list:
+                        currencies.add(balance.get("currency"))
+                
+                # Get currencies from assets (shouldn't happen for issuers but check anyway)
+                assets = result.get("assets", {})
+                for address, asset_list in assets.items():
+                    for asset in asset_list:
+                        currencies.add(asset.get("currency"))
+                
+                return list(currencies)
+            else:
+                logger.error(f"Failed to get issued currencies for {issuer_address}: {response}")
+                return []
+        except Exception as e:
+            logger.error(f"Error getting issued currencies for {issuer_address}: {e}")
+            return []
+
     def set_mev_protection(self, user_id: int, enabled: bool):
         """Sets the MEV protection status for a user."""
         if user_id not in self.mev_protection_settings:
@@ -610,4 +648,3 @@ class XRPSniper:
                 pass
         
         logger.info("Sniper stopped successfully")
-
