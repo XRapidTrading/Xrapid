@@ -1,17 +1,18 @@
-import xrpl
-from xrpl.wallet import generate_faucet_wallet, Wallet
-from xrpl.clients import JsonRpcClient
-from xrpl.models import Payment, TrustSet, IssuedCurrencyAmount
-from xrpl.transaction import submit_and_wait
 import asyncio
-import threading
+import xrpl
+from xrpl.clients import JsonRpcClient
+from xrpl.wallet import Wallet, generate_faucet_wallet
+from xrpl.models import AccountInfoRequest, TrustSet, IssuedCurrencyAmount
 
-# Initialize the XRP Ledger client (using a testnet for development)
-JSON_RPC_URL = "https://s.altnet.rippletest.net:51234/"
-client = JsonRpcClient(JSON_RPC_URL)
+# Standard JSON-RPC Client for the XRP Testnet
+JSON_RPC_URL = "https://s.altnet.rippletest.net/"
+client = JsonRpcClient(JSON_RPC_URL )
 
-# Helper function to run an async coroutine in a new event loop in a separate thread
+# --- Synchronous Wrapper for Async XRPL Functions ---
+# This is crucial for integrating with python-telegram-bot's event loop
+
 def _run_async_in_new_loop(coro):
+    """Runs an async coroutine in a new, dedicated event loop in a separate thread."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -19,100 +20,88 @@ def _run_async_in_new_loop(coro):
     finally:
         loop.close()
 
-async def _async_generate_faucet_wallet_isolated():
-    """Isolated async function to generate and fund a wallet from the faucet."""
-    try:
-        # The generate_faucet_wallet call itself is async and needs to be awaited
-        test_wallet = await asyncio.wait_for(generate_faucet_wallet(client), timeout=30)
-        return {
-            "address": test_wallet.classic_address,
-            "seed": test_wallet.seed,
-            "public_key": test_wallet.public_key,
-            "private_key": test_wallet.private_key,
-        }
-    except asyncio.TimeoutError:
-        return {"error": "XRP Ledger faucet timed out. Please try again later."}
-    except Exception as e:
-        return {"error": f"Failed to generate wallet: {e}"}
-
 def generate_new_wallet_sync():
-    """
-    Synchronous function to generate a new XRP Ledger wallet.
-    It runs the async faucet call in a dedicated event loop in a separate thread.
-    """
-    # Use the helper to run the async function in its own event loop
-    return _run_async_in_new_loop(_async_generate_faucet_wallet_isolated())
+    """Generates a new XRPL wallet and funds it via the faucet (synchronous wrapper)."""
+    async def _generate_and_fund():
+        try:
+            # Use asyncio.wait_for to prevent indefinite hanging
+            faucet_wallet = await asyncio.wait_for(generate_faucet_wallet(client), timeout=30)
+            return {"address": faucet_wallet.classic_address, "seed": faucet_wallet.seed}
+        except asyncio.TimeoutError:
+            return {"error": "Faucet did not respond in time. Please try again later."}
+        except Exception as e:
+            # Log the actual exception for debugging
+            print(f"Error in _generate_and_fund: {e}")
+            return {"error": f"Failed to generate wallet: {e}"}
+
+    return _run_async_in_new_loop(_generate_and_fund())
 
 def import_wallet(seed: str):
-    """Imports an existing XRP Ledger wallet from a seed."""
+    """Imports a wallet from a seed (synchronous wrapper)."""
     try:
-        imported_wallet = Wallet(seed=seed, sequence=0)
-        return {
-            "address": imported_wallet.classic_address,
-            "seed": imported_wallet.seed,
-            "public_key": imported_wallet.public_key,
-            "private_key": imported_wallet.private_key,
-        }
+        wallet = Wallet(seed)
+        return {"address": wallet.classic_address, "seed": wallet.seed}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Invalid seed or error importing wallet: {e}"}
 
 def get_account_info(address: str):
-    """Retrieves account information for a given XRP Ledger address."""
-    try:
-        acct_info = client.request(xrpl.models.requests.AccountInfo(account=address))
-        return acct_info.result
-    except Exception as e:
-        return {"error": str(e)}
+    """Gets account info for a given address (synchronous wrapper)."""
+    async def _get_info():
+        try:
+            acct_info = await client.request(AccountInfoRequest(account=address))
+            return acct_info.result
+        except Exception as e:
+            return {"error": f"Failed to get account info: {e}"}
+    return _run_async_in_new_loop(_get_info())
 
-def send_xrp(sender_seed: str, destination_address: str, amount: float):
-    """Sends XRP from one address to another."""
-    sender_wallet = Wallet(sender_seed, 0)
-    payment = Payment(
-        account=sender_wallet.classic_address,
-        amount=xrpl.utils.xrp_to_drops(amount),
-        destination=destination_address,
-    )
-    try:
-        response = submit_and_wait(payment, client, sender_wallet)
-        return response.result
-    except Exception as e:
-        return {"error": str(e)}
+def set_trustline(seed: str, currency: str, issuer: str):
+    """Sets a trustline for a given wallet (synchronous wrapper)."""
+    async def _set_trustline():
+        try:
+            wallet = Wallet(seed)
+            trust_set_tx = TrustSet(
+                account=wallet.classic_address,
+                fee="12", # Example fee
+                limit_amount=IssuedCurrencyAmount(
+                    currency=currency,
+                    issuer=issuer,
+                    value="1000000000" # Large enough limit
+                )
+            )
+            # Sign and send the transaction
+            signed_tx = xrpl.transaction.safe_sign_and_autofill_transaction(trust_set_tx, wallet, client)
+            response = await xrpl.transaction.send_reliable_submission(signed_tx, client)
+            return response.result
+        except Exception as e:
+            return {"error": f"Failed to set trustline: {e}"}
+    return _run_async_in_new_loop(_set_trustline())
 
-def set_trustline(sender_seed: str, currency_code: str, issuer_address: str, limit: str = "10000000000000000"):
-    """Sets a trustline for an issued token."""
-    sender_wallet = Wallet(sender_seed, 0)
-    trust_set = TrustSet(
-        account=sender_wallet.classic_address,
-        limit_amount=IssuedCurrencyAmount(
-            currency=currency_code,
-            issuer=issuer_address,
-            value=limit,
-        ),
-    )
-    try:
-        response = submit_and_wait(trust_set, client, sender_wallet)
-        return response.result
-    except Exception as e:
-        return {"error": str(e)}
-
-# Example Usage (for testing purposes)
+# Example usage (for local testing of xrpl_client.py)
 if __name__ == "__main__":
     print("Generating a new wallet...")
-    # For standalone testing, call the synchronous generate_new_wallet_sync
     new_wallet = generate_new_wallet_sync()
-    if "error" not in new_wallet:
-        print(f"New Wallet Address: {new_wallet["address"]}")
-        print(f"New Wallet Seed: {new_wallet["seed"]}")
+    if new_wallet and "address" in new_wallet:
+        print(f"New Wallet Address: {new_wallet['address']}")
+        print(f"New Wallet Seed: {new_wallet['seed']}")
 
         print("\nGetting account info for the new wallet...")
-        account_info = get_account_info(new_wallet["address"])
+        account_info = get_account_info(new_wallet['address'])
         print(account_info)
 
-        print("\nSetting a trustline (example for a hypothetical token)... ")
-        try:
-            trustline_result = set_trustline(new_wallet["seed"], "USD", "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k3l3m3n")
-            print(trustline_result)
-        except Exception as e:
-            print(f"Error setting trustline: {e}")
+        # Example of setting a trustline (replace with actual currency/issuer)
+        # print("\nSetting a trustline (example for a hypothetical token)... ")
+        # try:
+        #     trustline_result = set_trustline(new_wallet['seed'], "USD", "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k3l3m3n")
+        #     print(trustline_result)
+        # except Exception as e:
+        #     print(f"Error setting trustline: {e}")
     else:
-        print(f"Error: {new_wallet["error"]}")
+        print(f"Error: {new_wallet.get('error', 'Unknown error during generation')}")
+
+    print("\nImporting a wallet (example with a dummy seed)...")
+    dummy_seed = "sEdTj4Pqmkzzw45Cg1v6x3t7m1g3n5h2j1k4l6m8n"
+    imported_wallet = import_wallet(dummy_seed)
+    if imported_wallet and "address" in imported_wallet:
+        print(f"Imported Wallet Address: {imported_wallet['address']}")
+    else:
+        print(f"Error importing wallet: {imported_wallet.get('error', 'Unknown error during import')}")
