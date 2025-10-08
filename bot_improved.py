@@ -157,7 +157,7 @@ async def view_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE,
     message_text = f"🎯 Sniper Config: {config.get('name', 'Unnamed')}\n\n"
     message_text += f"Status: {status_emoji}\n\n"
     message_text += f"📋 Configuration:\n"
-    message_text += f"  • Ticker: {config.get(\'ticker\', \'Not Set\')}\n"
+    message_text += f"  • Ticker: {config.get('ticker', 'Not Set')}\n"
     message_text += f"  • Coin Name: {config.get(\'coin_name\', \'Not Set\')}\n"
     message_text += f"  • Dev Wallet: {config.get(\'dev_wallet_address\', \'Not Set\')}\n"
     message_text += f"  • Buy Amount: {config.get(\'buy_amount_xrp\', \'Not Set\')} XRP\n"
