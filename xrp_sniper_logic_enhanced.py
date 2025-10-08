@@ -24,6 +24,9 @@ class XRPSniper:
         self.wallets = {}
         self.sniper_configs = {}  # Structure: {user_id: {config_id: config_dict}}
         self.default_trade_settings = {}  # Default settings for manual trading
+        self.mev_protection_settings = {} # MEV protection settings
+        self.buy_presets = {} # Buy presets for each user
+        self.sell_presets = {} # Sell presets for each user
         self.running = False
         self.sniper_task = None
         self.ws = None
@@ -51,6 +54,21 @@ class XRPSniper:
                         int(k): v for k, v in data.get('default_trade_settings', {}).items()
                     }
                     
+                    # Load MEV protection settings
+                    self.mev_protection_settings = {
+                        int(k): v for k, v in data.get('mev_protection_settings', {}).items()
+                    }
+
+                    # Load buy presets
+                    self.buy_presets = {
+                        int(k): v for k, v in data.get('buy_presets', {}).items()
+                    }
+
+                    # Load sell presets
+                    self.sell_presets = {
+                        int(k): v for k, v in data.get('sell_presets', {}).items()
+                    }
+                    
                 logger.info(f"Loaded data for {len(self.wallets)} users with {sum(len(configs) for configs in self.sniper_configs.values())} sniper configs")
             except Exception as e:
                 logger.error(f"Error loading data: {e}")
@@ -69,6 +87,15 @@ class XRPSniper:
                 },
                 'default_trade_settings': {
                     str(k): v for k, v in self.default_trade_settings.items()
+                },
+                'mev_protection_settings': {
+                    str(k): v for k, v in self.mev_protection_settings.items()
+                },
+                'buy_presets': {
+                    str(k): v for k, v in self.buy_presets.items()
+                },
+                'sell_presets': {
+                    str(k): v for k, v in self.sell_presets.items()
                 }
             }
             with open(self.data_file, 'w') as f:
@@ -275,7 +302,8 @@ class XRPSniper:
                         token_currency, 
                         token_issuer, 
                         config.get("buy_amount_xrp", 10),
-                        config.get("slippage", 0.01)
+                        config.get("slippage", 0.01),
+                        mev_protect=self.mev_protection_settings.get(user_id, {}).get("enabled", False)
                     )
 
     async def _handle_trustset_transaction(self, transaction: dict, meta: dict):
@@ -330,11 +358,11 @@ class XRPSniper:
             logger.error(f"Error fetching order book: {e}")
             return []
 
-    async def _execute_buy_order(self, user_id: int, currency: str, issuer: str, buy_amount_xrp: float, slippage: float):
+    async def _execute_buy_order(self, user_id: int, currency: str, issuer: str, buy_amount_xrp: float, slippage: float, mev_protect: bool = False):
         """Executes a buy order for a token on the XRPL DEX."""
         if user_id not in self.wallets:
             logger.error(f"No wallet configured for user {user_id}. Cannot execute buy order.")
-            return
+            return False
 
         wallet = self.wallets[user_id]
         
@@ -362,7 +390,7 @@ class XRPSniper:
         
         if not offers:
             logger.warning(f"No offers found in order book for {currency}.{issuer}")
-            estimated_token_amount = buy_amount_xrp * 1000
+            estimated_token_amount = buy_amount_xrp * 1000 # Fallback estimation
         else:
             first_offer = offers[0]
             taker_gets = first_offer.get("TakerGets")
@@ -377,9 +405,9 @@ class XRPSniper:
                     estimated_token_amount = buy_amount_xrp * rate * (1 - slippage)
                     logger.info(f"Calculated rate: {rate} {currency} per XRP, buying {estimated_token_amount} {currency}")
                 else:
-                    estimated_token_amount = buy_amount_xrp * 1000
+                    estimated_token_amount = buy_amount_xrp * 1000 # Fallback
             else:
-                estimated_token_amount = buy_amount_xrp * 1000
+                estimated_token_amount = buy_amount_xrp * 1000 # Fallback
 
         # Create OfferCreate transaction
         offer = OfferCreate(
@@ -391,6 +419,13 @@ class XRPSniper:
             ),
             taker_pays=str(xrpl.utils.xrp_to_drops(buy_amount_xrp)),
         )
+
+        # MEV Protection (simplified: add a small delay or higher fee if enabled)
+        if mev_protect:
+            logger.info("MEV protection enabled: Adding a small delay before submission.")
+            await asyncio.sleep(0.5) # Simulate a slight delay or other MEV protection strategy
+            # For more advanced MEV protection, one might interact with a private transaction relay
+            # or use specific transaction flags/hooks if XRPL supports them.
 
         try:
             response = submit_and_wait(offer, client, wallet)
@@ -404,6 +439,150 @@ class XRPSniper:
         except Exception as e:
             logger.error(f"Error executing buy order for {currency}.{issuer}: {e}")
             return False
+
+    async def _execute_sell_order(self, user_id: int, currency: str, issuer: str, sell_percentage: float):
+        """Executes a sell order for a token on the XRPL DEX based on a percentage of holdings."""
+        if user_id not in self.wallets:
+            logger.error(f"No wallet configured for user {user_id}. Cannot execute sell order.")
+            return False
+
+        wallet = self.wallets[user_id]
+        account_info = self.get_account_info(wallet.classic_address)
+        
+        if "error" in account_info:
+            logger.error(f"Could not retrieve account info for sell order: {account_info['error']}")
+            return False
+
+        balances = account_info.get("account_data", {}).get("balances", [])
+        token_balance = 0.0
+        for balance in balances:
+            if isinstance(balance, dict) and balance.get("currency") == currency and balance.get("issuer") == issuer:
+                token_balance = float(balance.get("value", 0))
+                break
+        
+        if token_balance == 0:
+            logger.warning(f"User {user_id} has no {currency}.{issuer} to sell.")
+            return False
+
+        amount_to_sell = token_balance * (sell_percentage / 100.0)
+        if amount_to_sell <= 0:
+            logger.warning(f"Calculated sell amount is zero or negative for user {user_id}, {currency}.{issuer}.")
+            return False
+
+        # Query order book to get realistic price for selling (token for XRP)
+        offers = self.get_order_book(currency, issuer, "XRP", None)
+
+        if not offers:
+            logger.warning(f"No offers found in order book for selling {currency}.{issuer}")
+            return False
+        
+        # Take the best offer to sell into
+        first_offer = offers[0]
+        taker_gets = first_offer.get("TakerGets") # XRP
+        taker_pays = first_offer.get("TakerPays") # Token
+
+        if isinstance(taker_gets, str) and isinstance(taker_pays, dict):
+            # Calculate how much XRP we would get for the amount_to_sell
+            offered_token_amount = float(taker_pays.get("value", 0))
+            offered_xrp_amount = float(taker_gets) / 1_000_000
+
+            if offered_token_amount > 0:
+                xrp_per_token_rate = offered_xrp_amount / offered_token_amount
+                estimated_xrp_gain = amount_to_sell * xrp_per_token_rate
+            else:
+                logger.warning("Offered token amount is zero, cannot calculate rate.")
+                return False
+        else:
+            logger.warning("Unexpected offer format for sell order.")
+            return False
+
+        # Create OfferCreate transaction to sell tokens for XRP
+        offer = OfferCreate(
+            account=wallet.classic_address,
+            taker_gets=str(xrpl.utils.xrp_to_drops(estimated_xrp_gain)), # Amount of XRP to get
+            taker_pays=IssuedCurrencyAmount(
+                currency=currency,
+                issuer=issuer,
+                value=str(amount_to_sell)
+            ),
+        )
+
+        try:
+            response = submit_and_wait(offer, client, wallet)
+
+            if response.result['engine_result'] == 'tesSUCCESS':
+                logger.info(f"Successfully executed sell order for {sell_percentage}% of {currency}.{issuer} for user {user_id}")
+                return True
+            else:
+                logger.warning(f"Sell order failed for {currency}.{issuer}: {response.result}")
+                return False
+        except Exception as e:
+            logger.error(f"Error executing sell order for {currency}.{issuer}: {e}")
+            return False
+
+    def get_account_info(self, address: str) -> dict:
+        """Fetches account information from the XRPL."""
+        try:
+            acct_info = xrpl.models.requests.AccountInfo(account=address)
+            response = client.request(acct_info)
+            return response.result
+        except Exception as e:
+            logger.error(f"Error getting account info for {address}: {e}")
+            return {"error": str(e)}
+
+    def set_mev_protection(self, user_id: int, enabled: bool):
+        """Sets the MEV protection status for a user."""
+        if user_id not in self.mev_protection_settings:
+            self.mev_protection_settings[user_id] = {}
+        self.mev_protection_settings[user_id]["enabled"] = enabled
+        self.save_data()
+        logger.info(f"MEV protection for user {user_id} set to {enabled}")
+
+    def get_mev_protection_status(self, user_id: int) -> bool:
+        """Gets the MEV protection status for a user."""
+        return self.mev_protection_settings.get(user_id, {}).get("enabled", False)
+
+    def add_buy_preset(self, user_id: int, amount_xrp: float):
+        """Adds a buy preset for a user."""
+        if user_id not in self.buy_presets:
+            self.buy_presets[user_id] = []
+        if amount_xrp not in self.buy_presets[user_id]:
+            self.buy_presets[user_id].append(amount_xrp)
+            self.buy_presets[user_id].sort()
+            self.save_data()
+            logger.info(f"Buy preset {amount_xrp} XRP added for user {user_id}")
+
+    def remove_buy_preset(self, user_id: int, amount_xrp: float):
+        """Removes a buy preset for a user."""
+        if user_id in self.buy_presets and amount_xrp in self.buy_presets[user_id]:
+            self.buy_presets[user_id].remove(amount_xrp)
+            self.save_data()
+            logger.info(f"Buy preset {amount_xrp} XRP removed for user {user_id}")
+
+    def get_buy_presets(self, user_id: int) -> list:
+        """Gets all buy presets for a user."""
+        return self.buy_presets.get(user_id, [])
+
+    def add_sell_preset(self, user_id: int, percentage: int):
+        """Adds a sell preset for a user."""
+        if user_id not in self.sell_presets:
+            self.sell_presets[user_id] = []
+        if percentage not in self.sell_presets[user_id]:
+            self.sell_presets[user_id].append(percentage)
+            self.sell_presets[user_id].sort()
+            self.save_data()
+            logger.info(f"Sell preset {percentage}% added for user {user_id}")
+
+    def remove_sell_preset(self, user_id: int, percentage: int):
+        """Removes a sell preset for a user."""
+        if user_id in self.sell_presets and percentage in self.sell_presets[user_id]:
+            self.sell_presets[user_id].remove(percentage)
+            self.save_data()
+            logger.info(f"Sell preset {percentage}% removed for user {user_id}")
+
+    def get_sell_presets(self, user_id: int) -> list:
+        """Gets all sell presets for a user."""
+        return self.sell_presets.get(user_id, [])
 
     async def start_sniper(self):
         """Starts the XRP Ledger monitoring for sniping."""
