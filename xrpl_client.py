@@ -2,7 +2,11 @@ import asyncio
 import xrpl
 from xrpl.clients import JsonRpcClient
 from xrpl.wallet import Wallet, generate_faucet_wallet
-from xrpl.models import AccountInfoRequest, TrustSet, IssuedCurrencyAmount
+
+# Corrected imports for xrpl.models
+from xrpl.models.requests import AccountInfoRequest
+from xrpl.models.transactions import TrustSet
+from xrpl.models.amounts import IssuedCurrencyAmount
 
 # Standard JSON-RPC Client for the XRP Testnet
 JSON_RPC_URL = "https://s.altnet.rippletest.net/"
@@ -91,7 +95,7 @@ if __name__ == "__main__":
         # Example of setting a trustline (replace with actual currency/issuer)
         # print("\nSetting a trustline (example for a hypothetical token)... ")
         # try:
-        #     trustline_result = set_trustline(new_wallet['seed'], "USD", "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k3l3m3n")
+        #     trustline_result = set_trustline(new_wallet['seed'], "USD", "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k4l6m8n")
         #     print(trustline_result)
         # except Exception as e:
         #     print(f"Error setting trustline: {e}")
