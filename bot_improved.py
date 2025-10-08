@@ -691,6 +691,64 @@ async def my_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await update.message.reply_markdown_v2(message_text, reply_markup=reply_markup)
 
+async def generate_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Generates a new XRP Ledger wallet for the user."""
+    user_id = update.effective_user.id
+    
+    # Show loading message
+    if update.callback_query:
+        await update.callback_query.edit_message_text("⏳ Generating wallet... This may take up to 3 minutes if using the faucet.\n\nPlease wait...")
+    
+    # Generate wallet (tries faucet, falls back to local generation)
+    wallet_data = generate_new_wallet_sync()
+    
+    if "error" in wallet_data:
+        error_message = f"❌ Failed to generate wallet: {wallet_data['error']}"
+        if update.callback_query:
+            await update.callback_query.edit_message_text(error_message)
+        else:
+            await update.message.reply_text(error_message)
+        return
+    
+    # Store wallet in sniper
+    sniper.set_wallet(user_id, wallet_data['seed'])
+    
+    # Prepare success message
+    funded_status = "✅ Funded" if wallet_data.get('funded', False) else "⚠️ Unfunded (please fund manually)"
+    message_text = f"✨ **Wallet Generated Successfully!**\n\n"
+    message_text += f"📍 **Address:** `{wallet_data['address']}`\n"
+    message_text += f"🔑 **Seed:** `{wallet_data['seed']}`\n"
+    message_text += f"💰 **Status:** {funded_status}\n\n"
+    message_text += f"ℹ️ {wallet_data.get('message', '')}\n\n"
+    message_text += f"⚠️ **Keep your seed safe! Do not share it with anyone.**"
+    
+    keyboard = [
+        [InlineKeyboardButton("👁️ View My Wallet", callback_data="my_wallet")],
+        [InlineKeyboardButton("↩️ Back to Wallet Settings", callback_data="wallet_settings")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+
+async def import_wallet_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Prompts user to send their wallet seed for import."""
+    context.user_data["awaiting_input"] = "import_wallet_seed"
+    
+    message_text = "📥 **Import Wallet**\n\nPlease send your XRP Ledger wallet seed (secret key).\n\n⚠️ Make sure you're in a private chat and delete the message after importing!"
+    
+    keyboard = [
+        [InlineKeyboardButton("↩️ Cancel", callback_data="wallet_settings")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handles incoming text messages, especially for awaiting input."""
     user_id = update.effective_user.id
@@ -702,6 +760,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             if awaiting_input == "buy_token_ca":
                 # Process the contract address (issuer) - auto-detects currencies
                 await process_buy_token_ca(update, context, message_text.strip())
+            elif awaiting_input == "import_wallet_seed":
+                # Import wallet from seed
+                seed = message_text.strip()
+                wallet_data = import_wallet(seed)
+                
+                if "error" in wallet_data:
+                    await update.message.reply_text(f"❌ Failed to import wallet: {wallet_data['error']}")
+                else:
+                    # Store wallet in sniper
+                    sniper.set_wallet(user_id, seed)
+                    
+                    message_text = f"✅ **Wallet Imported Successfully!**\n\n"
+                    message_text += f"📍 **Address:** `{wallet_data['address']}`\n\n"
+                    message_text += f"⚠️ **Please delete your seed message above for security!**"
+                    
+                    keyboard = [
+                        [InlineKeyboardButton("👁️ View My Wallet", callback_data="my_wallet")],
+                        [InlineKeyboardButton("↩️ Back to Wallet Settings", callback_data="wallet_settings")],
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+                
+                context.user_data.pop("awaiting_input", None)
             elif awaiting_input.startswith("custom_buy_amount_"):
                 # Handle custom buy amount from buy menu
                 parts = awaiting_input.replace("custom_buy_amount_", "").split("_", 1)
