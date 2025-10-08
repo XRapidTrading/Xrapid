@@ -291,5 +291,364 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         [InlineKeyboardButton("↩️ Back to Main Menu", callback_data="start")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    message_text = "Adjust over
-(Content truncated due to size limit. Use page ranges or line ranges to read remaining content)
+    message_text = "Adjust overall bot settings."
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+async def wallet_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Displays wallet management options."""
+    keyboard = [
+        [InlineKeyboardButton("✨ Generate New Wallet", callback_data="generate_wallet")],
+        [InlineKeyboardButton("📥 Import Existing Wallet", callback_data="import_wallet")],
+        [InlineKeyboardButton("👁️ View My Wallet", callback_data="my_wallet")],
+        [InlineKeyboardButton("↩️ Back to Settings", callback_data="settings_menu")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = "Manage your XRP Ledger wallets."
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+async def general_buy_sell_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Displays general buy/sell configuration options."""
+    user_id = update.effective_user.id
+    # These settings are general, not sniper-specific
+    general_settings = context.user_data.get("general_settings", {})
+
+    keyboard = [
+        [InlineKeyboardButton(f"💲 Default Buy Amount XRP: {general_settings.get("default_buy_amount_xrp", "Not Set")}", callback_data="set_default_buy_amount_xrp")],
+        [InlineKeyboardButton(f"📉 Default Slippage: {general_settings.get("default_slippage", "Not Set")}", callback_data="set_default_slippage")],
+        [InlineKeyboardButton(f"🛡️ MEV Protection: {general_settings.get("mev_protection", "Off")}", callback_data="toggle_mev_protection")],
+        [InlineKeyboardButton(f"⛽ Default Fees: {general_settings.get("default_fees", "Not Set")}", callback_data="set_default_fees")],
+        [InlineKeyboardButton("↩️ Back to Settings", callback_data="settings_menu")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = "Configure your general buying and selling parameters."
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+# --- Sniper-Specific Settings Handlers (for temporary config) ---
+async def set_sniper_token_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.callback_query.edit_message_text("Please enter the **Token Name (Ticker)** for this sniper config (e.g., USD, SOLO):")
+    context.user_data["awaiting_sniper_token_name"] = True
+
+async def set_sniper_token_issuer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.callback_query.edit_message_text("Please enter the **Token Issuer Address** for this sniper config:")
+    context.user_data["awaiting_sniper_token_issuer"] = True
+
+async def set_sniper_dev_wallet_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.callback_query.edit_message_text("Please enter the **Dev Wallet Address** to monitor for this sniper config:")
+    context.user_data["awaiting_sniper_dev_wallet_address"] = True
+
+async def set_sniper_buy_amount_xrp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.callback_query.edit_message_text("Please enter the **sniper-specific** amount of XRP to use for buying tokens:")
+    context.user_data["awaiting_sniper_buy_amount_xrp"] = True
+
+async def set_sniper_slippage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.callback_query.edit_message_text("Please enter the **sniper-specific** slippage percentage (e.g., 0.5 for 0.5%):")
+    context.user_data["awaiting_sniper_slippage"] = True
+
+async def set_sniper_fees(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.callback_query.edit_message_text("Please enter the **sniper-specific** transaction fees (e.g., 0.00001 XRP):")
+    context.user_data["awaiting_sniper_fees"] = True
+
+async def toggle_sniper_mev_protection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    temp_config = context.user_data.get("temp_sniper_config", {})
+    current_mev_status = temp_config.get("mev_protection", "Off")
+    new_mev_status = "On" if current_mev_status == "Off" else "Off"
+    temp_config["mev_protection"] = new_mev_status
+    context.user_data["temp_sniper_config"] = temp_config
+    await update.callback_query.answer(f"Sniper MEV Protection toggled to {new_mev_status}")
+    await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data) # Refresh menu
+
+async def set_sniper_tip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.callback_query.edit_message_text("Please enter the **sniper-specific** tip amount (e.g., 0.001 XRP):")
+    context.user_data["awaiting_sniper_tip"] = True
+
+# --- Sell Percentage Handlers (Placeholder) ---
+async def sell_percentage(update: Update, context: ContextTypes.DEFAULT_TYPE, percentage: int) -> None:
+    user_id = update.effective_user.id
+    wallet = sniper.wallets.get(user_id)
+    if not wallet:
+        await update.callback_query.edit_message_text("No wallet configured to sell from.")
+        return
+    
+    # In a real implementation, you would fetch the user's token balances
+    # and execute a sell order for the specified percentage of a chosen token.
+    # For now, this is a placeholder.
+    await update.callback_query.edit_message_text(f"Selling {percentage}% of a token (functionality under development).")
+
+async def sell_5_percent(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await sell_percentage(update, context, 5)
+
+async def sell_25_percent(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await sell_percentage(update, context, 25)
+
+async def sell_50_percent(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await sell_percentage(update, context, 50)
+
+async def sell_100_percent(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await sell_percentage(update, context, 100)
+
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles button presses from inline keyboards."""
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "start":
+        await start(update, context)
+    elif query.data == "help_menu":
+        await help_menu(update, context)
+    elif query.data == "positions_menu":
+        await positions_menu(update, context)
+    elif query.data == "sniper_menu":
+        await sniper_menu(update, context)
+    elif query.data == "settings_menu":
+        await settings_menu(update, context)
+    elif query.data == "wallet_settings":
+        await wallet_settings(update, context)
+    elif query.data == "general_buy_sell_settings":
+        await general_buy_sell_settings(update, context)
+    elif query.data == "generate_wallet":
+        await generate_wallet(update, context)
+    elif query.data == "import_wallet":
+        await import_wallet_prompt(update, context)
+    elif query.data == "my_wallet":
+        await my_wallet(update, context)
+    elif query.data == "create_sniper_config_new":
+        await create_sniper_config_new(update, context)
+    elif query.data.startswith("manage_config_"):
+        await manage_sniper_config(update, context)
+    elif query.data.startswith("toggle_config_"):
+        await toggle_sniper_config_status(update, context)
+    elif query.data.startswith("edit_config_"):
+        await edit_sniper_config(update, context)
+    elif query.data.startswith("delete_config_"):
+        await delete_sniper_config(update, context)
+    elif query.data == "view_positions":
+        await view_positions(update, context)
+    elif query.data == "back_to_editor":
+        await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data)
+    
+    # General Buy/Sell Settings Callbacks
+    elif query.data == "set_default_buy_amount_xrp":
+        await set_default_buy_amount_xrp(update, context)
+    elif query.data == "set_default_slippage":
+        await set_default_slippage(update, context)
+    elif query.data == "toggle_mev_protection":
+        await toggle_mev_protection(update, context)
+    elif query.data == "set_default_fees":
+        await set_default_fees(update, context)
+
+    # Sniper-Specific Settings Callbacks (for temporary config)
+    elif query.data == "set_sniper_token_name":
+        await set_sniper_token_name(update, context)
+    elif query.data == "set_sniper_token_issuer":
+        await set_sniper_token_issuer(update, context)
+    elif query.data == "set_sniper_dev_wallet_address":
+        await set_sniper_dev_wallet_address(update, context)
+    elif query.data == "set_sniper_buy_amount_xrp":
+        await set_sniper_buy_amount_xrp(update, context)
+    elif query.data == "set_sniper_slippage":
+        await set_sniper_slippage(update, context)
+    elif query.data == "set_sniper_fees":
+        await set_sniper_fees(update, context)
+    elif query.data == "toggle_sniper_mev_protection":
+        await toggle_sniper_mev_protection(update, context)
+    elif query.data == "set_sniper_tip":
+        await set_sniper_tip(update, context)
+    elif query.data == "select_sniper_wallet":
+        await select_sniper_wallet(update, context)
+    elif query.data.startswith("set_wallet_"):
+        await set_sniper_wallet(update, context)
+    elif query.data == "save_sniper_config":
+        await save_sniper_config(update, context)
+
+    # Sell Percentage Callbacks
+    elif query.data == "sell_5_percent":
+        await sell_5_percent(update, context)
+    elif query.data == "sell_25_percent":
+        await sell_25_percent(update, context)
+    elif query.data == "sell_50_percent":
+        await sell_50_percent(update, context)
+    elif query.data == "sell_100_percent":
+        await sell_100_percent(update, context)
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle regular text messages for various inputs."""
+    user_id = update.effective_user.id
+    message_text = update.message.text
+
+    # --- General Settings Input Handlers ---
+    if context.user_data.get("awaiting_seed_input"):
+        seed = message_text.strip()
+        try:
+            imported_wallet = import_wallet(seed)
+            if "error" not in imported_wallet:
+                sniper.add_wallet(user_id, imported_wallet)
+                await update.message.reply_text(
+                    f"Wallet imported successfully! Address: `{imported_wallet["address"]}`",
+                    parse_mode="MarkdownV2"
+                )
+            else:
+                await update.message.reply_text(f"Error importing wallet: {imported_wallet["error"]}")
+        except Exception as e:
+            await update.message.reply_text(f"An unexpected error occurred: {e}")
+        finally:
+            context.user_data["awaiting_seed_input"] = False
+            await wallet_settings(update, context) # Return to wallet settings menu
+
+    elif context.user_data.get("awaiting_default_buy_amount_xrp"):
+        try:
+            buy_amount = float(message_text.strip())
+            general_settings = context.user_data.get("general_settings", {})
+            general_settings["default_buy_amount_xrp"] = buy_amount
+            context.user_data["general_settings"] = general_settings
+            await update.message.reply_text(f"Default buy amount set to: {buy_amount} XRP")
+        except ValueError:
+            await update.message.reply_text("Invalid amount. Please enter a number.")
+        finally:
+            context.user_data["awaiting_default_buy_amount_xrp"] = False
+            await general_buy_sell_settings(update, context) # Return to general buy/sell settings menu
+
+    elif context.user_data.get("awaiting_default_slippage"):
+        try:
+            slippage = float(message_text.strip())
+            general_settings = context.user_data.get("general_settings", {})
+            general_settings["default_slippage"] = slippage
+            context.user_data["general_settings"] = general_settings
+            await update.message.reply_text(f"Default slippage set to: {slippage}%")
+        except ValueError:
+            await update.message.reply_text("Invalid value. Please enter a number.")
+        finally:
+            context.user_data["awaiting_default_slippage"] = False
+            await general_buy_sell_settings(update, context) # Return to general buy/sell settings menu
+
+    elif context.user_data.get("awaiting_default_fees"):
+        try:
+            fees = float(message_text.strip())
+            general_settings = context.user_data.get("general_settings", {})
+            general_settings["default_fees"] = fees
+            context.user_data["general_settings"] = general_settings
+            await update.message.reply_text(f"Default fees set to: {fees} XRP")
+        except ValueError:
+            await update.message.reply_text("Invalid value. Please enter a number.")
+        finally:
+            context.user_data["awaiting_default_fees"] = False
+            await general_buy_sell_settings(update, context) # Return to general buy/sell settings menu
+
+    # --- Sniper Settings Input Handlers (for temporary config) ---
+    elif context.user_data.get("awaiting_sniper_config_name"):
+        await handle_sniper_config_name_input(update, context)
+
+    elif context.user_data.get("awaiting_sniper_token_name"):
+        temp_config = context.user_data.get("temp_sniper_config", {})
+        temp_config["token_name"] = message_text.strip()
+        context.user_data["temp_sniper_config"] = temp_config
+        await update.message.reply_text(f"Token Name set to: {message_text.strip()}")
+        context.user_data["awaiting_sniper_token_name"] = False
+        await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data)
+
+    elif context.user_data.get("awaiting_sniper_token_issuer"):
+        temp_config = context.user_data.get("temp_sniper_config", {})
+        temp_config["token_issuer"] = message_text.strip()
+        context.user_data["temp_sniper_config"] = temp_config
+        await update.message.reply_text(f"Token Issuer set to: {message_text.strip()}")
+        context.user_data["awaiting_sniper_token_issuer"] = False
+        await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data)
+
+    elif context.user_data.get("awaiting_sniper_dev_wallet_address"):
+        temp_config = context.user_data.get("temp_sniper_config", {})
+        temp_config["dev_wallet_address"] = message_text.strip()
+        context.user_data["temp_sniper_config"] = temp_config
+        await update.message.reply_text(f"Dev Wallet Address set to: {message_text.strip()}")
+        context.user_data["awaiting_sniper_dev_wallet_address"] = False
+        await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data)
+
+    elif context.user_data.get("awaiting_sniper_buy_amount_xrp"):
+        try:
+            buy_amount = float(message_text.strip())
+            temp_config = context.user_data.get("temp_sniper_config", {})
+            temp_config["buy_amount_xrp"] = buy_amount
+            context.user_data["temp_sniper_config"] = temp_config
+            await update.message.reply_text(f"Sniper buy amount set to: {buy_amount} XRP")
+        except ValueError:
+            await update.message.reply_text("Invalid amount. Please enter a number.")
+        finally:
+            context.user_data["awaiting_sniper_buy_amount_xrp"] = False
+            await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data)
+
+    elif context.user_data.get("awaiting_sniper_slippage"):
+        try:
+            slippage = float(message_text.strip())
+            temp_config = context.user_data.get("temp_sniper_config", {})
+            temp_config["slippage"] = slippage
+            context.user_data["temp_sniper_config"] = temp_config
+            await update.message.reply_text(f"Sniper slippage set to: {slippage}%")
+        except ValueError:
+            await update.message.reply_text("Invalid value. Please enter a number.")
+        finally:
+            context.user_data["awaiting_sniper_slippage"] = False
+            await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data)
+
+    elif context.user_data.get("awaiting_sniper_fees"):
+        try:
+            fees = float(message_text.strip())
+            temp_config = context.user_data.get("temp_sniper_config", {})
+            temp_config["fees"] = fees
+            context.user_data["temp_sniper_config"] = temp_config
+            await update.message.reply_text(f"Sniper fees set to: {fees} XRP")
+        except ValueError:
+            await update.message.reply_text("Invalid value. Please enter a number.")
+        finally:
+            context.user_data["awaiting_sniper_fees"] = False
+            await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data)
+
+    elif context.user_data.get("awaiting_sniper_tip"):
+        try:
+            tip = float(message_text.strip())
+            temp_config = context.user_data.get("temp_sniper_config", {})
+            temp_config["tip"] = tip
+            context.user_data["temp_sniper_config"] = temp_config
+            await update.message.reply_text(f"Sniper tip set to: {tip} XRP")
+        except ValueError:
+            await update.message.reply_text("Invalid value. Please enter a number.")
+        finally:
+            context.user_data["awaiting_sniper_tip"] = False
+            await create_sniper_config_editor(update, context, is_new="editing_config_name" not in context.user_data)
+
+    else:
+        # Handle pasted contract addresses
+        # This is a simplified example. You might want to add more robust CA validation.
+        if len(message_text.strip()) > 30: # Simple check for a potential contract address
+            # Here you would add logic to display buy/sell options for the pasted CA
+            await update.message.reply_text(f"Pasted address detected: {message_text.strip()}\n(Buy/Sell functionality for pasted addresses is under development)")
+        else:
+            await update.message.reply_text("I\'m not sure what you mean. Use the menu to see available actions.")
+
+async def post_init(application: Application) -> None:
+    """Runs once after the bot is started and before polling starts."""
+    await application.bot.set_my_commands([
+        ("start", "Start the bot and show the main menu"),
+        ("help", "Show help information"),
+    ])
+    logger.info("Bot commands set successfully!")
+
+def main() -> None:
+    """Start the bot."""
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    if not BOT_TOKEN:
+        logger.error("BOT_TOKEN environment variable not set!")
+        return
+
+    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_menu)) # Add handler for /help command
+    application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    logger.info("Application started")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == "__main__":
+    main()
