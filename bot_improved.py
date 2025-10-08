@@ -104,13 +104,13 @@ async def show_sniper_config_editor(update: Update, context: ContextTypes.DEFAUL
     config = context.user_data.get("creating_sniper_config", {})
     
     keyboard = [
-        [InlineKeyboardButton(f"📝 Config Name: {config.get(\'name\', \'Not Set\')}", callback_data="edit_sniper_name")],
-        [InlineKeyboardButton(f"🎯 Target Currency: {config.get(\'target_currency\', \'Not Set\')}", callback_data="edit_target_currency")],
-        [InlineKeyboardButton(f"🏦 Target Issuer: {config.get(\'target_issuer\', \'Not Set\')[:20] + \'...\' if config.get(\'target_issuer\') else \'Not Set\'}", callback_data="edit_target_issuer")],
-        [InlineKeyboardButton(f"👤 Dev Wallet: {config.get(\'dev_wallet_address\', \'Not Set\')[:20] + \'...\' if config.get(\'dev_wallet_address\') else \'Not Set\'}", callback_data="edit_dev_wallet")],
-        [InlineKeyboardButton(f"💰 Buy Amount: {config.get(\'buy_amount_xrp\', \'Not Set\')} XRP", callback_data="edit_buy_amount")],
-        [InlineKeyboardButton(f"📉 Slippage: {config.get(\'slippage\', \'Not Set\')}%", callback_data="edit_slippage")],
-        [InlineKeyboardButton(f"⛽ Max Gas Fee: {config.get(\'max_gas_fee\', \'Not Set\')} XRP", callback_data="edit_max_gas_fee")],
+        [InlineKeyboardButton(f"📝 Config Name: {config.get('name', 'Not Set')}", callback_data="edit_sniper_name")],
+        [InlineKeyboardButton(f"🎯 Target Currency: {config.get('target_currency', 'Not Set')}", callback_data="edit_target_currency")],
+        [InlineKeyboardButton(f"🏦 Target Issuer: {config.get('target_issuer', 'Not Set')[:20] + '...' if config.get('target_issuer') else 'Not Set'}", callback_data="edit_target_issuer")],
+        [InlineKeyboardButton(f"👤 Dev Wallet: {config.get('dev_wallet_address', 'Not Set')[:20] + '...' if config.get('dev_wallet_address') else 'Not Set'}", callback_data="edit_dev_wallet")],
+        [InlineKeyboardButton(f"💰 Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP", callback_data="edit_buy_amount")],
+        [InlineKeyboardButton(f"📉 Slippage: {config.get('slippage', 'Not Set')}%", callback_data="edit_slippage")],
+        [InlineKeyboardButton(f"⛽ Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP", callback_data="edit_max_gas_fee")],
         [InlineKeyboardButton("✅ Save Config", callback_data="save_sniper_config")],
         [InlineKeyboardButton("❌ Cancel", callback_data="sniper_menu")],
     ]
@@ -118,13 +118,13 @@ async def show_sniper_config_editor(update: Update, context: ContextTypes.DEFAUL
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     message_text = "⚙️ Configure Your Sniper\n\n"
-    message_text += f"Name: {config.get(\'name\', \'Not Set\')}\n"
-    message_text += f"Target Currency: {config.get(\'target_currency\', \'Not Set\')}\n"
-    message_text += f"Target Issuer: {config.get(\'target_issuer\', \'Not Set\')}\n"
-    message_text += f"Dev Wallet: {config.get(\'dev_wallet_address\', \'Not Set\')}\n"
-    message_text += f"Buy Amount: {config.get(\'buy_amount_xrp\', \'Not Set\')} XRP\n"
-    message_text += f"Slippage: {config.get(\'slippage\', \'Not Set\')}%\n"
-    message_text += f"Max Gas Fee: {config.get(\'max_gas_fee\', \'Not Set\')} XRP\n\n"
+    message_text += f"Name: {config.get('name', 'Not Set')}\n"
+    message_text += f"Target Currency: {config.get('target_currency', 'Not Set')}\n"
+    message_text += f"Target Issuer: {config.get('target_issuer', 'Not Set')}\n"
+    message_text += f"Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
+    message_text += f"Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
+    message_text += f"Slippage: {config.get('slippage', 'Not Set')}%\n"
+    message_text += f"Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP\n\n"
     message_text += "Click on any field to edit it."
     
     if update.callback_query:
@@ -154,15 +154,15 @@ async def view_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE,
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    message_text = f"🎯 Sniper Config: {config.get(\'name\', \'Unnamed\')}\n\n"
+    message_text = f"🎯 Sniper Config: {config.get('name', 'Unnamed')}\n\n"
     message_text += f"Status: {status_emoji}\n\n"
     message_text += f"📋 Configuration:\n"
-    message_text += f"  • Target Currency: {config.get(\'target_currency\', \'Not Set\')}\n"
-    message_text += f"  • Target Issuer: {config.get(\'target_issuer\', \'Not Set\')}\n"
-    message_text += f"  • Dev Wallet: {config.get(\'dev_wallet_address\', \'Not Set\')}\n"
-    message_text += f"  • Buy Amount: {config.get(\'buy_amount_xrp\', \'Not Set\')} XRP\n"
-    message_text += f"  • Slippage: {config.get(\'slippage\', \'Not Set\')}%\n"
-    message_text += f"  • Max Gas Fee: {config.get(\'max_gas_fee\', \'Not Set\')} XRP\n"
+    message_text += f"  • Target Currency: {config.get('target_currency', 'Not Set')}\n"
+    message_text += f"  • Target Issuer: {config.get('target_issuer', 'Not Set')}\n"
+    message_text += f"  • Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
+    message_text += f"  • Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
+    message_text += f"  • Slippage: {config.get('slippage', 'Not Set')}%\n"
+    message_text += f"  • Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP\n"
     
     await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
 
@@ -203,7 +203,7 @@ async def save_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE)
     missing_fields = [field for field in required_fields if not config.get(field)]
     
     if missing_fields:
-        await update.callback_query.answer(f"Please set: {\' , \'.join(missing_fields)}", show_alert=True)
+        await update.callback_query.answer(f"Please set: {', '.join(missing_fields)}", show_alert=True)
         return
     
     # Save the config
@@ -269,9 +269,9 @@ async def buy_sell_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     current_settings = sniper.default_trade_settings.get(user_id, {})
 
     keyboard = [
-        [InlineKeyboardButton(f"💲 Default Buy Amount: {current_settings.get(\'buy_amount_xrp\', \'Not Set\')} XRP", callback_data="set_default_buy_amount")],
-        [InlineKeyboardButton(f"📉 Default Slippage: {current_settings.get(\'slippage\', \'Not Set\')}%", callback_data="set_default_slippage")],
-        [InlineKeyboardButton(f"⛽ Default Gas Fee: {current_settings.get(\'max_gas_fee\', \'Not Set\')} XRP", callback_data="set_default_gas_fee")],
+        [InlineKeyboardButton(f"💲 Default Buy Amount: {current_settings.get('buy_amount_xrp', 'Not Set')} XRP", callback_data="set_default_buy_amount")],
+        [InlineKeyboardButton(f"📉 Default Slippage: {current_settings.get('slippage', 'Not Set')}%", callback_data="set_default_slippage")],
+        [InlineKeyboardButton(f"⛽ Default Gas Fee: {current_settings.get('max_gas_fee', 'Not Set')} XRP", callback_data="set_default_gas_fee")],
         [InlineKeyboardButton("↩️ Back to Settings", callback_data="settings_menu")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -363,7 +363,7 @@ async def remove_sell_preset(update: Update, context: ContextTypes.DEFAULT_TYPE,
     await sell_presets_menu(update, context)
 
 async def view_positions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Displays the user\'s current token holdings and provides options to buy/sell."""
+    """Displays the user's current token holdings and provides options to buy/sell."""
     user_id = update.effective_user.id
     wallet = sniper.wallets.get(user_id)
     if not wallet:
@@ -376,7 +376,7 @@ async def view_positions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     account_info = sniper.get_account_info(wallet.classic_address)
     if "error" in account_info:
-        message = f"Could not retrieve account info: {account_info[\'error\']}"
+        message = f"Could not retrieve account info: {account_info['error']}"
         if update.callback_query:
             await update.callback_query.edit_message_text(message)
         else:
@@ -465,7 +465,7 @@ async def sell_token_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, cu
     if sell_presets:
         keyboard.append([InlineKeyboardButton("Sell Presets (% of holdings):", callback_data="noop")])
         for preset in sell_presets:
-            keyboard.append([InlineKeyboardButton(f"{preset}%", callback_data=f"execute_sell_{currency}_{issuer}_{preset}")])
+            keyboard.append([InlineKeyboardButton(f"{preset}%", callback_data=f"remove_sell_preset_{preset}")])
     
     keyboard.append([InlineKeyboardButton("Custom Percentage", callback_data=f"custom_sell_percentage_{currency}_{issuer}")])
     keyboard.append([InlineKeyboardButton("↩️ Back to Positions", callback_data="view_positions")])
@@ -499,7 +499,7 @@ async def my_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     wallet = sniper.wallets.get(user_id)
 
     if not wallet:
-        message = "No wallet configured. Please generate or import a wallet."
+        message = "No wallet configured. Please generate or import a wallet in Settings -> Wallet Settings."
         if update.callback_query:
             await update.callback_query.edit_message_text(message)
         else:
@@ -508,7 +508,7 @@ async def my_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     account_info = sniper.get_account_info(wallet.classic_address)
     if "error" in account_info:
-        message = f"Could not retrieve account info: {account_info[\'error\']}"
+        message = f"Could not retrieve account info: {account_info['error']}"
         if update.callback_query:
             await update.callback_query.edit_message_text(message)
         else:
@@ -778,7 +778,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await query.answer()
 
     # Default message handler
-    # await update.message.reply_text("I\'m not sure what you mean. Use /start to see the menu.")
+    # await update.message.reply_text("I\\'m not sure what you mean. Use /start to see the menu.")
 
 async def post_init(application: Application) -> None:
     """Runs once after the bot is started and before polling starts."""
@@ -806,3 +806,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
