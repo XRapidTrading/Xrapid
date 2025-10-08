@@ -14,44 +14,62 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Configuration
-JSON_RPC_URL = "https://s.altnet.rippletest.net:51234/" # Using testnet for development
-WEBSOCKET_URL = "wss://s.altnet.rippletest.net:51233/" # Using testnet for development
+JSON_RPC_URL = "https://s.altnet.rippletest.net:51234/"  # Using testnet for development
+WEBSOCKET_URL = "wss://s.altnet.rippletest.net:51233/"  # Using testnet for development
 client = JsonRpcClient(JSON_RPC_URL)
 
 class XRPSniper:
     def __init__(self, data_file="sniper_data.json"):
         self.data_file = data_file
         self.wallets = {}
-        self.snipe_settings = {}
-        self.active_snipes = {}
-        self.running = False  # Flag to control sniper execution
-        self.sniper_task = None  # Reference to the sniper task
-        self.ws = None  # WebSocket connection reference
+        self.sniper_configs = {}  # Structure: {user_id: {config_id: config_dict}}
+        self.default_trade_settings = {}  # Default settings for manual trading
+        self.running = False
+        self.sniper_task = None
+        self.ws = None
         self.load_data()
 
     def load_data(self):
-        """Load wallets and settings from file."""
+        """Load wallets, sniper configs, and settings from file."""
         if os.path.exists(self.data_file):
             try:
                 with open(self.data_file, 'r') as f:
                     data = json.load(f)
+                    
                     # Reconstruct wallets from seeds
                     for user_id, wallet_data in data.get('wallets', {}).items():
                         self.wallets[int(user_id)] = Wallet(wallet_data['seed'], 0)
-                    self.snipe_settings = {int(k): v for k, v in data.get('settings', {}).items()}
-                logger.info(f"Loaded data for {len(self.wallets)} users")
+                    
+                    # Load sniper configs
+                    self.sniper_configs = {
+                        int(user_id): configs 
+                        for user_id, configs in data.get('sniper_configs', {}).items()
+                    }
+                    
+                    # Load default trade settings
+                    self.default_trade_settings = {
+                        int(k): v for k, v in data.get('default_trade_settings', {}).items()
+                    }
+                    
+                logger.info(f"Loaded data for {len(self.wallets)} users with {sum(len(configs) for configs in self.sniper_configs.values())} sniper configs")
             except Exception as e:
                 logger.error(f"Error loading data: {e}")
     
     def save_data(self):
-        """Save wallets and settings to file."""
+        """Save wallets, sniper configs, and settings to file."""
         try:
             data = {
                 'wallets': {
                     str(user_id): {'seed': wallet.seed, 'address': wallet.classic_address}
                     for user_id, wallet in self.wallets.items()
                 },
-                'settings': {str(k): v for k, v in self.snipe_settings.items()}
+                'sniper_configs': {
+                    str(user_id): configs 
+                    for user_id, configs in self.sniper_configs.items()
+                },
+                'default_trade_settings': {
+                    str(k): v for k, v in self.default_trade_settings.items()
+                }
             }
             with open(self.data_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -61,21 +79,81 @@ class XRPSniper:
 
     def add_wallet(self, user_id: int, wallet_data: dict):
         """Adds a wallet to the sniper bot for a specific user."""
-        self.wallets[user_id] = Wallet(wallet_data["seed"], 0) # Store xrpl.wallet.Wallet object
+        self.wallets[user_id] = Wallet(wallet_data["seed"], 0)
         self.save_data()
         logger.info(f"Wallet added for user {user_id}: {self.wallets[user_id].classic_address}")
 
-    def update_snipe_settings(self, user_id: int, settings: dict):
-        """Updates sniping settings for a user."""
-        self.snipe_settings[user_id] = settings
+    def get_user_sniper_configs(self, user_id: int) -> dict:
+        """Get all sniper configs for a user."""
+        return self.sniper_configs.get(user_id, {})
+
+    def get_sniper_config(self, user_id: int, config_id: str) -> dict:
+        """Get a specific sniper config."""
+        return self.sniper_configs.get(user_id, {}).get(config_id)
+
+    def save_sniper_config(self, user_id: int, config_id: str, config: dict):
+        """Save or update a sniper config."""
+        if user_id not in self.sniper_configs:
+            self.sniper_configs[user_id] = {}
+        
+        self.sniper_configs[user_id][config_id] = config
         self.save_data()
-        logger.info(f"Sniping settings updated for user {user_id}: {settings}")
+        logger.info(f"Sniper config {config_id} saved for user {user_id}")
+
+    def update_sniper_config_status(self, user_id: int, config_id: str, enabled: bool):
+        """Update the enabled status of a sniper config."""
+        if user_id in self.sniper_configs and config_id in self.sniper_configs[user_id]:
+            self.sniper_configs[user_id][config_id]["enabled"] = enabled
+            self.save_data()
+            
+            # Update running status
+            self._update_running_status()
+            
+            logger.info(f"Sniper config {config_id} for user {user_id} {'enabled' if enabled else 'disabled'}")
+
+    def delete_sniper_config(self, user_id: int, config_id: str):
+        """Delete a sniper config."""
+        if user_id in self.sniper_configs and config_id in self.sniper_configs[user_id]:
+            del self.sniper_configs[user_id][config_id]
+            self.save_data()
+            
+            # Update running status
+            self._update_running_status()
+            
+            logger.info(f"Sniper config {config_id} deleted for user {user_id}")
+
+    def _update_running_status(self):
+        """Update the running status based on enabled configs."""
+        # Check if any config is enabled
+        has_enabled_configs = any(
+            config.get("enabled", False)
+            for user_configs in self.sniper_configs.values()
+            for config in user_configs.values()
+        )
+        
+        if has_enabled_configs and not self.running:
+            self.running = True
+        elif not has_enabled_configs and self.running:
+            self.running = False
+
+    def get_enabled_configs(self) -> list:
+        """Get all enabled sniper configs across all users."""
+        enabled_configs = []
+        for user_id, configs in self.sniper_configs.items():
+            for config_id, config in configs.items():
+                if config.get("enabled", False):
+                    enabled_configs.append({
+                        "user_id": user_id,
+                        "config_id": config_id,
+                        "config": config
+                    })
+        return enabled_configs
 
     async def _keep_alive(self):
         """Sends periodic ping to keep WebSocket connection alive."""
         try:
             while self.running and self.ws:
-                await asyncio.sleep(30)  # Ping every 30 seconds
+                await asyncio.sleep(30)
                 if self.ws and not self.ws.closed:
                     await self.ws.ping()
                     logger.debug("Sent WebSocket ping")
@@ -84,21 +162,21 @@ class XRPSniper:
 
     async def _subscribe_to_transactions(self):
         """Subscribes to real-time transaction streams on the XRPL with auto-reconnect."""
-        reconnect_delay = 5  # Initial reconnect delay in seconds
-        max_reconnect_delay = 60  # Maximum reconnect delay
+        reconnect_delay = 5
+        max_reconnect_delay = 60
         
         while self.running:
             try:
                 logger.info(f"Connecting to WebSocket: {WEBSOCKET_URL}")
                 async with websockets.connect(
                     WEBSOCKET_URL,
-                    ping_interval=30,  # Built-in ping every 30 seconds
-                    ping_timeout=10,   # Timeout for ping response
+                    ping_interval=30,
+                    ping_timeout=10,
                     close_timeout=10
                 ) as ws:
                     self.ws = ws
                     
-                    # Subscribe to all transactions and ledger streams for comprehensive monitoring
+                    # Subscribe to all transactions and ledger streams
                     await ws.send(json.dumps({
                         "id": 1,
                         "command": "subscribe",
@@ -108,11 +186,7 @@ class XRPSniper:
                     response = await ws.recv()
                     logger.info(f"Subscription response: {response}")
                     
-                    # Reset delay on successful connection
                     reconnect_delay = 5
-                    
-                    # Start keep-alive task (optional, since we use ping_interval)
-                    # keep_alive_task = asyncio.create_task(self._keep_alive())
                     
                     while self.running:
                         try:
@@ -131,8 +205,6 @@ class XRPSniper:
                 if self.running:
                     logger.error(f"WebSocket error: {e}. Reconnecting in {reconnect_delay}s...")
                     await asyncio.sleep(reconnect_delay)
-                    
-                    # Exponential backoff
                     reconnect_delay = min(reconnect_delay * 2, max_reconnect_delay)
                 else:
                     logger.info("Sniper stopped, not reconnecting")
@@ -160,10 +232,9 @@ class XRPSniper:
             # Monitor for OfferCreate transactions (new listings/liquidity)
             if tx_type == "OfferCreate":
                 await self._handle_offer_create_transaction(transaction, meta)
-            # Monitor for TrustSet transactions (new token issuances, though less direct for sniping)
+            # Monitor for TrustSet transactions
             elif tx_type == "TrustSet":
                 await self._handle_trustset_transaction(transaction, meta)
-            # Add other transaction types relevant to token sniping (e.g., AMMCreate if supported)
 
     async def _handle_offer_create_transaction(self, transaction: dict, meta: dict):
         """Handles OfferCreate transactions to detect new token listings/liquidity."""
@@ -180,52 +251,58 @@ class XRPSniper:
         if isinstance(taker_gets, dict) and "currency" in taker_gets:
             token_currency = taker_gets["currency"]
             token_issuer = taker_gets["issuer"]
-        elif isinstance(taker_gets, str): # XRP
+        elif isinstance(taker_gets, str):  # XRP
             payment_currency = "XRP"
 
         if isinstance(taker_pays, dict) and "currency" in taker_pays:
             payment_currency = taker_pays["currency"]
-        elif isinstance(taker_pays, str): # XRP
+        elif isinstance(taker_pays, str):  # XRP
             payment_currency = "XRP"
 
         if token_currency and token_issuer and payment_currency == "XRP":
             logger.info(f"Potential new listing: {token_currency}.{token_issuer} against XRP")
-            for user_id, settings in self.snipe_settings.items():
-                if settings.get("afk_mode") and self._matches_snipe_criteria(user_id, token_currency, token_issuer, transaction):
+            
+            # Check all enabled configs
+            enabled_configs = self.get_enabled_configs()
+            for config_data in enabled_configs:
+                user_id = config_data["user_id"]
+                config = config_data["config"]
+                
+                if self._matches_snipe_criteria(config, token_currency, token_issuer, transaction):
                     logger.info(f"Attempting to snipe token {token_currency}.{token_issuer} for user {user_id}")
-                    await self._execute_buy_order(user_id, token_currency, token_issuer, settings["buy_amount_xrp"], settings.get("slippage", 0.01))
+                    await self._execute_buy_order(
+                        user_id, 
+                        token_currency, 
+                        token_issuer, 
+                        config.get("buy_amount_xrp", 10),
+                        config.get("slippage", 0.01)
+                    )
 
     async def _handle_trustset_transaction(self, transaction: dict, meta: dict):
-        """Handles TrustSet transactions (less direct for sniping, but can indicate new tokens)."""
+        """Handles TrustSet transactions."""
         logger.info(f"Detected TrustSet transaction: {transaction.get('hash')}")
-        # This can be used to track new tokens, but OfferCreate is more direct for sniping opportunities.
-        # Further logic can be added here if specific TrustSet patterns indicate a snipe.
 
-    def _matches_snipe_criteria(self, user_id: int, currency: str, issuer: str, transaction: dict) -> bool:
-        """Checks if the token matches the user's sniping criteria."""
-        settings = self.snipe_settings.get(user_id)
-        if not settings:
-            return False
-
+    def _matches_snipe_criteria(self, config: dict, currency: str, issuer: str, transaction: dict) -> bool:
+        """Checks if the token matches the sniper config criteria."""
+        
         # Criteria 1: Developer wallet
-        dev_wallet_address = settings.get("dev_wallet_address")
+        dev_wallet_address = config.get("dev_wallet_address")
         if dev_wallet_address and transaction.get("Account") == dev_wallet_address:
             logger.info(f"Match by developer wallet: {dev_wallet_address}")
             return True
 
-        # Criteria 2: Token name/ticket (currency code)
-        target_currency = settings.get("target_currency")
+        # Criteria 2: Token name/ticker (currency code)
+        target_currency = config.get("target_currency")
         if target_currency and target_currency.upper() == currency.upper():
             logger.info(f"Match by currency code: {target_currency}")
             return True
 
         # Criteria 3: Issuer address
-        target_issuer = settings.get("target_issuer")
+        target_issuer = config.get("target_issuer")
         if target_issuer and target_issuer == issuer:
             logger.info(f"Match by target issuer: {target_issuer}")
             return True
 
-        # Add more complex criteria here (e.g., initial liquidity, transaction volume, etc.)
         return False
 
     def get_order_book(self, taker_pays_currency, taker_pays_issuer, 
@@ -268,7 +345,7 @@ class XRPSniper:
                 limit_amount=IssuedCurrencyAmount(
                     currency=currency,
                     issuer=issuer,
-                    value="10000000000000000" # Large limit
+                    value="10000000000000000"  # Large limit
                 ),
             )
             response = submit_and_wait(trust_set_tx, client, wallet)
@@ -279,25 +356,21 @@ class XRPSniper:
                 logger.info(f"Trustline set for {currency}.{issuer} for user {user_id}")
         except Exception as e:
             logger.error(f"Error setting trustline for {currency}.{issuer}: {e}")
-            # Continue anyway, trustline might already exist
 
         # Query order book to get realistic price
         offers = self.get_order_book("XRP", None, currency, issuer)
         
         if not offers:
             logger.warning(f"No offers found in order book for {currency}.{issuer}")
-            # Use fallback estimation
             estimated_token_amount = buy_amount_xrp * 1000
         else:
-            # Calculate based on first offer
             first_offer = offers[0]
             taker_gets = first_offer.get("TakerGets")
             taker_pays = first_offer.get("TakerPays")
             
-            # Calculate exchange rate
             if isinstance(taker_gets, dict) and isinstance(taker_pays, str):
                 token_amount = float(taker_gets.get("value", 0))
-                xrp_amount = float(taker_pays) / 1_000_000  # Convert drops to XRP
+                xrp_amount = float(taker_pays) / 1_000_000
                 
                 if xrp_amount > 0:
                     rate = token_amount / xrp_amount
@@ -314,9 +387,9 @@ class XRPSniper:
             taker_gets=IssuedCurrencyAmount(
                 currency=currency,
                 issuer=issuer,
-                value=str(estimated_token_amount) # Amount of token to receive
+                value=str(estimated_token_amount)
             ),
-            taker_pays=str(xrpl.utils.xrp_to_drops(buy_amount_xrp)), # Amount of XRP to pay
+            taker_pays=str(xrpl.utils.xrp_to_drops(buy_amount_xrp)),
         )
 
         try:
@@ -324,7 +397,6 @@ class XRPSniper:
 
             if response.result['engine_result'] == 'tesSUCCESS':
                 logger.info(f"Successfully executed buy order for {buy_amount_xrp} XRP worth of {currency}.{issuer} for user {user_id}")
-                # TODO: Notify user via Telegram bot
                 return True
             else:
                 logger.warning(f"Buy order failed for {currency}.{issuer}: {response.result}")
@@ -348,11 +420,9 @@ class XRPSniper:
         logger.info("Stopping XRP Sniper bot...")
         self.running = False
         
-        # Close WebSocket connection if open
         if self.ws and not self.ws.closed:
             await self.ws.close()
         
-        # Cancel sniper task if exists
         if self.sniper_task and not self.sniper_task.done():
             self.sniper_task.cancel()
             try:
@@ -361,33 +431,3 @@ class XRPSniper:
                 pass
         
         logger.info("Sniper stopped successfully")
-
-# Example Usage (for testing the sniping logic independently)
-async def main():
-    sniper = XRPSniper()
-
-    # Simulate adding a user's wallet and settings
-    # IMPORTANT: In a real scenario, never hardcode seeds. Use secure storage.
-    # For testnet, you can generate a wallet and fund it via https://faucet.altnet.rippletest.net/
-    # Replace with a real testnet seed for actual testing
-    test_seed = "sEdTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Replace with your testnet wallet seed
-    test_wallet_data = {"seed": test_seed, "address": Wallet(test_seed, 0).classic_address}
-    sniper.add_wallet(123, test_wallet_data)
-
-    sniper.update_snipe_settings(123, {
-        "afk_mode": True,
-        "buy_amount_xrp": 10, # Amount of XRP to spend
-        "slippage": 0.05, # 5% slippage tolerance
-        "target_issuer": "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k3l3m3n", # Example issuer on testnet
-        "target_currency": "USD" # Example currency code
-        # "dev_wallet_address": "rxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Example dev wallet to monitor
-    })
-
-    try:
-        await sniper.start_sniper()
-    except KeyboardInterrupt:
-        logger.info("Received interrupt signal")
-        await sniper.stop_sniper()
-
-if __name__ == "__main__":
-    asyncio.run(main())
