@@ -699,8 +699,11 @@ async def generate_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if update.callback_query:
         await update.callback_query.edit_message_text("⏳ Generating wallet... This may take up to 3 minutes if using the faucet.\n\nPlease wait...")
     
+    # Import the async function directly
+    from xrpl_client import _async_generate_faucet_wallet_isolated
+    
     # Generate wallet (tries faucet, falls back to local generation)
-    wallet_data = generate_new_wallet_sync()
+    wallet_data = await _async_generate_faucet_wallet_isolated()
     
     if "error" in wallet_data:
         error_message = f"❌ Failed to generate wallet: {wallet_data['error']}"
