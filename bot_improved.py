@@ -64,7 +64,7 @@ async def buy_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def process_buy_token_ca(update: Update, context: ContextTypes.DEFAULT_TYPE, ca: str) -> None:
-    """Process the contract address and show token details with buy options."""
+    """Process the contract address and automatically detect issued currencies."""
     user_id = update.effective_user.id
     
     # Validate the address format (basic check)
@@ -72,17 +72,45 @@ async def process_buy_token_ca(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("❌ Invalid address format. Please provide a valid XRPL issuer address.")
         return
     
-    # For XRPL, we need both currency code and issuer
-    # Ask for currency code
-    context.user_data["awaiting_input"] = "buy_token_currency"
-    context.user_data["buy_token_issuer"] = ca
+    # Show loading message
+    loading_msg = await update.message.reply_text(f"🔍 Analyzing issuer address...\n`{ca}`\n\nPlease wait...", parse_mode="Markdown")
     
-    await update.message.reply_text(
-        f"✅ Issuer address received: `{ca}`\n\n"
-        f"Now please send the **Currency Code** (ticker) for this token.\n"
-        f"_Example: USD, BTC, MYTOKEN_",
-        parse_mode="Markdown"
-    )
+    # Get all currencies issued by this address
+    currencies = sniper.get_issued_currencies(ca)
+    
+    if not currencies or len(currencies) == 0:
+        await loading_msg.edit_text(
+            f"❌ **No tokens found**\n\n"
+            f"The address `{ca}` doesn't appear to have issued any tokens, or the server couldn't retrieve the information.\n\n"
+            f"Please verify the issuer address and try again.",
+            parse_mode="Markdown"
+        )
+        context.user_data.pop("awaiting_input", None)
+        return
+    
+    # If only one currency, show buy options directly
+    if len(currencies) == 1:
+        currency = currencies[0]
+        await loading_msg.delete()
+        await show_token_buy_options(update, context, currency, ca)
+    else:
+        # Multiple currencies - let user choose
+        keyboard = []
+        for currency in sorted(currencies):
+            keyboard.append([InlineKeyboardButton(
+                f"💰 {currency}", 
+                callback_data=f"select_currency_{currency}_{ca}"
+            )])
+        keyboard.append([InlineKeyboardButton("↩️ Back to Buy Menu", callback_data="buy_menu")])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        message_text = f"✅ **Found {len(currencies)} token(s)**\n\n"
+        message_text += f"🏦 Issuer: `{ca}`\n\n"
+        message_text += "Select a token to buy:"
+        
+        await loading_msg.edit_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+    
+    context.user_data.pop("awaiting_input", None)
 
 async def show_token_buy_options(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str) -> None:
     """Show token details and buy preset buttons."""
@@ -133,7 +161,11 @@ async def show_token_buy_options(update: Update, context: ContextTypes.DEFAULT_T
     message_text += price_info
     message_text += "Select an amount to buy:"
     
-    await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+    # Handle both message and callback_query updates
+    if update.callback_query:
+        await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def execute_buy_from_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str, amount_xrp: float) -> None:
     """Execute a buy order from the buy menu."""
@@ -668,18 +700,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if awaiting_input and message_text:
         try:
             if awaiting_input == "buy_token_ca":
-                # Process the contract address (issuer)
+                # Process the contract address (issuer) - auto-detects currencies
                 await process_buy_token_ca(update, context, message_text.strip())
-            elif awaiting_input == "buy_token_currency":
-                # Process the currency code
-                issuer = context.user_data.get("buy_token_issuer")
-                if issuer:
-                    currency = message_text.strip().upper()
-                    context.user_data.pop("buy_token_issuer", None)
-                    context.user_data.pop("awaiting_input", None)
-                    await show_token_buy_options(update, context, currency, issuer)
-                else:
-                    await update.message.reply_text("❌ Error: Issuer address not found. Please start over.")
             elif awaiting_input.startswith("custom_buy_amount_"):
                 # Handle custom buy amount from buy menu
                 parts = awaiting_input.replace("custom_buy_amount_", "").split("_", 1)
@@ -854,6 +876,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 currency = parts[0]
                 issuer = parts[1]
                 await custom_buy_amount_prompt(update, context, currency, issuer)
+        elif data.startswith("select_currency_"):
+            # Handle select_currency_{currency}_{issuer}
+            parts = data.replace("select_currency_", "").split("_", 1)
+            if len(parts) == 2:
+                currency = parts[0]
+                issuer = parts[1]
+                await show_token_buy_options(update, context, currency, issuer)
         elif data == "sniper_menu":
             await sniper_menu(update, context)
         elif data == "settings_menu":
