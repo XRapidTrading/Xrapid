@@ -152,18 +152,18 @@ async def view_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE,
         [InlineKeyboardButton("↩️ Back to Sniper Menu", callback_data="sniper_menu")],
     ]
     
+async def some_callback(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
-
-message_text = f"🎯 Sniper Config: {config.get('name', 'Unnamed')}\n\n"
-message_text += f"Status: {status_emoji}\n\n"
-message_text += f"📋 Configuration:\n"
-message_text += f"  • Ticker: {config.get('ticker', 'Not Set')}\n"
-message_text += f"  • Coin Name: {config.get('coin_name', 'Not Set')}\n"
-message_text += f"  • Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
-message_text += f"  • Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
-message_text += f"  • Slippage: {config.get('slippage', 'Not Set')}%\n"
-message_text += f"  • Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP\n"
-await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+    message_text = f"🎯 Sniper Config: {config.get('name', 'Unnamed')}\n\n"
+    message_text += f"Status: {status_emoji}\n\n"
+    message_text += f"📋 Configuration:\n"
+    message_text += f"  • Ticker: {config.get('target_ticker', 'Not Set')}\n"
+    message_text += f"  • Name: {config.get('target_name', 'Not Set')}\n"
+    message_text += f"  • Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
+    message_text += f"  • Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
+    message_text += f"  • Slippage: {config.get('slippage', 'Not Set')}%\n"
+    message_text += f"  • Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP\n"
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
 
 async def toggle_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE, config_id: str) -> None:
     """Toggle a sniper config on/off."""
