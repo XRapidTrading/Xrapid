@@ -531,11 +531,12 @@ async def my_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handles incoming text messages, especially for awaiting input."""
     user_id = update.effective_user.id
-    message_text = update.message.text
+    message_text = update.message.text if update.message else None
     awaiting_input = context.user_data.get("awaiting_input")
 
-    if awaiting_input:
+    if awaiting_input and message_text:
         try:
+
             if awaiting_input == "add_buy_preset":
                 amount = float(message_text)
                 if amount <= 0:
