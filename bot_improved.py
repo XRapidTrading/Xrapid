@@ -152,7 +152,7 @@ async def view_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE,
         [InlineKeyboardButton("↩️ Back to Sniper Menu", callback_data="sniper_menu")],
     ]
     
-async def some_callback(update: Update, context: CallbackContext):
+async def some_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     message_text = f"🎯 Sniper Config: {config.get('name', 'Unnamed')}\n\n"
     message_text += f"Status: {status_emoji}\n\n"
