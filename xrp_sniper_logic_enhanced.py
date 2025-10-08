@@ -266,28 +266,27 @@ class XRPSniper:
     async def _handle_offer_create_transaction(self, transaction: dict, meta: dict):
         """Handles OfferCreate transactions to detect new token listings/liquidity."""
         logger.info(f"Detected OfferCreate transaction: {transaction.get('hash')}")
-
         taker_gets = transaction.get("TakerGets")
         taker_pays = transaction.get("TakerPays")
 
-        # Identify the token being offered and the currency being paid
-        token_currency = None
-        token_issuer = None
-        payment_currency = None
+        # Identify the token being offered and the ticker being paid
+        token_ticker = None
+        token_name = None
+        payment_ticker = None
 
         if isinstance(taker_gets, dict) and "currency" in taker_gets:
-            token_currency = taker_gets["currency"]
-            token_issuer = taker_gets["issuer"]
+            token_ticker = taker_gets["currency"]
+            token_name = taker_gets["issuer"]
         elif isinstance(taker_gets, str):  # XRP
-            payment_currency = "XRP"
+            payment_ticker = "XRP"
 
         if isinstance(taker_pays, dict) and "currency" in taker_pays:
-            payment_currency = taker_pays["currency"]
+            payment_ticker = taker_pays["currency"]
         elif isinstance(taker_pays, str):  # XRP
-            payment_currency = "XRP"
+            payment_ticker = "XRP"
 
-        if token_currency and token_issuer and payment_currency == "XRP":
-            logger.info(f"Potential new listing: {token_currency}.{token_issuer} against XRP")
+        if token_ticker and token_name and payment_ticker == "XRP":
+            logger.info(f"Potential new listing: {token_ticker}.{token_name} against XRP")
             
             # Check all enabled configs
             enabled_configs = self.get_enabled_configs()
@@ -295,12 +294,12 @@ class XRPSniper:
                 user_id = config_data["user_id"]
                 config = config_data["config"]
                 
-                if self._matches_snipe_criteria(config, token_currency, token_issuer, transaction):
-                    logger.info(f"Attempting to snipe token {token_currency}.{token_issuer} for user {user_id}")
+                if self._matches_snipe_criteria(config, token_ticker, token_name, transaction):
+                    logger.info(f"Attempting to snipe token {token_ticker}.{token_name} for user {user_id}")
                     await self._execute_buy_order(
                         user_id, 
-                        token_currency, 
-                        token_issuer, 
+                        token_ticker, 
+                        token_name, 
                         config.get("buy_amount_xrp", 10),
                         config.get("slippage", 0.01),
                         mev_protect=self.mev_protection_settings.get(user_id, {}).get("enabled", False)
@@ -310,7 +309,7 @@ class XRPSniper:
         """Handles TrustSet transactions."""
         logger.info(f"Detected TrustSet transaction: {transaction.get('hash')}")
 
-    def _matches_snipe_criteria(self, config: dict, currency: str, issuer: str, transaction: dict) -> bool:
+    def _matches_snipe_criteria(self, config: dict, ticker: str, name: str, transaction: dict) -> bool:
         """Checks if the token matches the sniper config criteria."""
         
         # Criteria 1: Developer wallet
@@ -319,33 +318,33 @@ class XRPSniper:
             logger.info(f"Match by developer wallet: {dev_wallet_address}")
             return True
 
-        # Criteria 2: Token name/ticker (currency code)
-        target_currency = config.get("target_currency")
-        if target_currency and target_currency.upper() == currency.upper():
-            logger.info(f"Match by currency code: {target_currency}")
+        # Criteria 2: Token ticker (currency code)
+        target_ticker = config.get("target_ticker")
+        if target_ticker and target_ticker.upper() == ticker.upper():
+            logger.info(f"Match by ticker: {target_ticker}")
             return True
 
-        # Criteria 3: Issuer address
-        target_issuer = config.get("target_issuer")
-        if target_issuer and target_issuer == issuer:
-            logger.info(f"Match by target issuer: {target_issuer}")
+        # Criteria 3: Token name (issuer address)
+        target_name = config.get("target_name")
+        if target_name and target_name == name:
+            logger.info(f"Match by target name: {target_name}")
             return True
 
         return False
 
-    def get_order_book(self, taker_pays_currency, taker_pays_issuer, 
-                       taker_gets_currency, taker_gets_issuer):
+    def get_order_book(self, taker_pays_ticker, taker_pays_name, 
+                       taker_gets_ticker, taker_gets_name):
         """Query the order book for current prices."""
         try:
             taker_pays_obj = {
-                "currency": taker_pays_currency,
-                "issuer": taker_pays_issuer
-            } if taker_pays_currency != "XRP" else "XRP"
+                "currency": taker_pays_ticker,
+                "issuer": taker_pays_name
+            } if taker_pays_ticker != "XRP" else "XRP"
             
             taker_gets_obj = {
-                "currency": taker_gets_currency,
-                "issuer": taker_gets_issuer
-            } if taker_gets_currency != "XRP" else "XRP"
+                "currency": taker_gets_ticker,
+                "issuer": taker_gets_name
+            } if taker_gets_ticker != "XRP" else "XRP"
             
             request = xrpl.models.requests.BookOffers(
                 taker_pays=taker_pays_obj,
@@ -358,7 +357,7 @@ class XRPSniper:
             logger.error(f"Error fetching order book: {e}")
             return []
 
-    async def _execute_buy_order(self, user_id: int, currency: str, issuer: str, buy_amount_xrp: float, slippage: float, mev_protect: bool = False):
+    async def _execute_buy_order(self, user_id: int, ticker: str, name: str, buy_amount_xrp: float, slippage: float, mev_protect: bool = False):
         """Executes a buy order for a token on the XRPL DEX."""
         if user_id not in self.wallets:
             logger.error(f"No wallet configured for user {user_id}. Cannot execute buy order.")
@@ -371,25 +370,25 @@ class XRPSniper:
             trust_set_tx = TrustSet(
                 account=wallet.classic_address,
                 limit_amount=IssuedCurrencyAmount(
-                    currency=currency,
-                    issuer=issuer,
+                    currency=ticker,
+                    issuer=name,
                     value="10000000000000000"  # Large limit
                 ),
             )
             response = submit_and_wait(trust_set_tx, client, wallet)
 
             if response.result['engine_result'] not in ['tesSUCCESS', 'tecNO_LINE', 'tecNO_LINE_INSUF_RESERVE']:
-                logger.warning(f"TrustSet failed for {currency}.{issuer}: {response.result}")
+                logger.warning(f"TrustSet failed for {ticker}.{name}: {response.result}")
             else:
-                logger.info(f"Trustline set for {currency}.{issuer} for user {user_id}")
+                logger.info(f"Trustline set for {ticker}.{name} for user {user_id}")
         except Exception as e:
-            logger.error(f"Error setting trustline for {currency}.{issuer}: {e}")
+            logger.error(f"Error setting trustline for {ticker}.{name}: {e}")
 
         # Query order book to get realistic price
-        offers = self.get_order_book("XRP", None, currency, issuer)
+        offers = self.get_order_book("XRP", None, ticker, name)
         
         if not offers:
-            logger.warning(f"No offers found in order book for {currency}.{issuer}")
+            logger.warning(f"No offers found in order book for {ticker}.{name}")
             estimated_token_amount = buy_amount_xrp * 1000 # Fallback estimation
         else:
             first_offer = offers[0]
@@ -403,7 +402,7 @@ class XRPSniper:
                 if xrp_amount > 0:
                     rate = token_amount / xrp_amount
                     estimated_token_amount = buy_amount_xrp * rate * (1 - slippage)
-                    logger.info(f"Calculated rate: {rate} {currency} per XRP, buying {estimated_token_amount} {currency}")
+                    logger.info(f"Calculated rate: {rate} {ticker} per XRP, buying {estimated_token_amount} {ticker}")
                 else:
                     estimated_token_amount = buy_amount_xrp * 1000 # Fallback
             else:
@@ -413,8 +412,8 @@ class XRPSniper:
         offer = OfferCreate(
             account=wallet.classic_address,
             taker_gets=IssuedCurrencyAmount(
-                currency=currency,
-                issuer=issuer,
+                currency=ticker,
+                issuer=name,
                 value=str(estimated_token_amount)
             ),
             taker_pays=str(xrpl.utils.xrp_to_drops(buy_amount_xrp)),
@@ -431,16 +430,16 @@ class XRPSniper:
             response = submit_and_wait(offer, client, wallet)
 
             if response.result['engine_result'] == 'tesSUCCESS':
-                logger.info(f"Successfully executed buy order for {buy_amount_xrp} XRP worth of {currency}.{issuer} for user {user_id}")
+                logger.info(f"Successfully executed buy order for {buy_amount_xrp} XRP worth of {ticker}.{name} for user {user_id}")
                 return True
             else:
-                logger.warning(f"Buy order failed for {currency}.{issuer}: {response.result}")
+                logger.warning(f"Buy order failed for {ticker}.{name}: {response.result}")
                 return False
         except Exception as e:
-            logger.error(f"Error executing buy order for {currency}.{issuer}: {e}")
+            logger.error(f"Error executing buy order for {ticker}.{name}: {e}")
             return False
 
-    async def _execute_sell_order(self, user_id: int, currency: str, issuer: str, sell_percentage: float):
+    async def _execute_sell_order(self, user_id: int, ticker: str, name: str, sell_percentage: float):
         """Executes a sell order for a token on the XRPL DEX based on a percentage of holdings."""
         if user_id not in self.wallets:
             logger.error(f"No wallet configured for user {user_id}. Cannot execute sell order.")
@@ -456,24 +455,24 @@ class XRPSniper:
         balances = account_info.get("account_data", {}).get("balances", [])
         token_balance = 0.0
         for balance in balances:
-            if isinstance(balance, dict) and balance.get("currency") == currency and balance.get("issuer") == issuer:
+            if isinstance(balance, dict) and balance.get("currency") == ticker and balance.get("issuer") == name:
                 token_balance = float(balance.get("value", 0))
                 break
         
         if token_balance == 0:
-            logger.warning(f"User {user_id} has no {currency}.{issuer} to sell.")
+            logger.warning(f"User {user_id} has no {ticker}.{name} to sell.")
             return False
 
         amount_to_sell = token_balance * (sell_percentage / 100.0)
         if amount_to_sell <= 0:
-            logger.warning(f"Calculated sell amount is zero or negative for user {user_id}, {currency}.{issuer}.")
+            logger.warning(f"Calculated sell amount is zero or negative for user {user_id}, {ticker}.{name}.")
             return False
 
         # Query order book to get realistic price for selling (token for XRP)
-        offers = self.get_order_book(currency, issuer, "XRP", None)
+        offers = self.get_order_book(ticker, name, "XRP", None)
 
         if not offers:
-            logger.warning(f"No offers found in order book for selling {currency}.{issuer}")
+            logger.warning(f"No offers found in order book for selling {ticker}.{name}")
             return False
         
         # Take the best offer to sell into
@@ -501,8 +500,8 @@ class XRPSniper:
             account=wallet.classic_address,
             taker_gets=str(xrpl.utils.xrp_to_drops(estimated_xrp_gain)), # Amount of XRP to get
             taker_pays=IssuedCurrencyAmount(
-                currency=currency,
-                issuer=issuer,
+                currency=ticker,
+                issuer=name,
                 value=str(amount_to_sell)
             ),
         )
@@ -511,13 +510,13 @@ class XRPSniper:
             response = submit_and_wait(offer, client, wallet)
 
             if response.result['engine_result'] == 'tesSUCCESS':
-                logger.info(f"Successfully executed sell order for {sell_percentage}% of {currency}.{issuer} for user {user_id}")
+                logger.info(f"Successfully executed sell order for {sell_percentage}% of {ticker}.{name} for user {user_id}")
                 return True
             else:
-                logger.warning(f"Sell order failed for {currency}.{issuer}: {response.result}")
+                logger.warning(f"Sell order failed for {ticker}.{name}: {response.result}")
                 return False
         except Exception as e:
-            logger.error(f"Error executing sell order for {currency}.{issuer}: {e}")
+            logger.error(f"Error executing sell order for {ticker}.{name}: {e}")
             return False
 
     def get_account_info(self, address: str) -> dict:
