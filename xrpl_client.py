@@ -5,6 +5,10 @@ from xrpl.models import Payment, TrustSet, IssuedCurrencyAmount
 from xrpl.transaction import submit_and_wait
 import asyncio
 import threading
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Initialize the XRP Ledger client (using a testnet for development)
 JSON_RPC_URL = "https://s.altnet.rippletest.net:51234/"
@@ -19,26 +23,61 @@ def _run_async_in_new_loop(coro):
     finally:
         loop.close()
 
+def generate_wallet_locally():
+    """
+    Generate a new XRP Ledger wallet locally (instant, no network call).
+    This always works and creates a valid seed/address.
+    """
+    try:
+        from xrpl.wallet import Wallet
+        new_wallet = Wallet.create()
+        return {
+            "address": new_wallet.classic_address,
+            "seed": new_wallet.seed,
+            "public_key": new_wallet.public_key,
+            "private_key": new_wallet.private_key,
+            "funded": False,
+            "message": "Wallet generated successfully. Fund it to activate."
+        }
+    except Exception as e:
+        return {"error": f"Failed to generate wallet: {e}"}
+
 async def _async_generate_faucet_wallet_isolated():
     """Isolated async function to generate and fund a wallet from the faucet."""
     try:
-        # The generate_faucet_wallet call itself is async and needs to be awaited
-        test_wallet = await asyncio.wait_for(generate_faucet_wallet(client), timeout=30)
-        return {
-            "address": test_wallet.classic_address,
-            "seed": test_wallet.seed,
-            "public_key": test_wallet.public_key,
-            "private_key": test_wallet.private_key,
-        }
-    except asyncio.TimeoutError:
-        return {"error": "XRP Ledger faucet timed out. Please try again later."}
+        # Try to get a faucet-funded wallet with retries
+        for attempt in range(3):
+            try:
+                logger.info(f"Attempting to get faucet wallet (attempt {attempt + 1}/3)...")
+                test_wallet = await asyncio.wait_for(generate_faucet_wallet(client), timeout=60)
+                return {
+                    "address": test_wallet.classic_address,
+                    "seed": test_wallet.seed,
+                    "public_key": test_wallet.public_key,
+                    "private_key": test_wallet.private_key,
+                    "funded": True,
+                    "message": "Wallet generated and funded from faucet!"
+                }
+            except asyncio.TimeoutError:
+                if attempt < 2:
+                    await asyncio.sleep(3)
+                    continue
+                # If all attempts fail, generate locally
+                logger.warning("Faucet timed out, generating local wallet instead")
+                local_wallet = generate_wallet_locally()
+                local_wallet["message"] = "⚠️ Faucet unavailable. Wallet generated locally - please fund manually."
+                return local_wallet
     except Exception as e:
-        return {"error": f"Failed to generate wallet: {e}"}
+        logger.error(f"Faucet error: {e}, falling back to local generation")
+        # Fallback to local generation
+        local_wallet = generate_wallet_locally()
+        local_wallet["message"] = f"⚠️ Faucet error. Wallet generated locally - please fund manually."
+        return local_wallet
 
 def generate_new_wallet_sync():
     """
     Synchronous function to generate a new XRP Ledger wallet.
-    It runs the async faucet call in a dedicated event loop in a separate thread.
+    First tries to use faucet (testnet), falls back to local generation if faucet fails.
     """
     # Use the helper to run the async function in its own event loop
     return _run_async_in_new_loop(_async_generate_faucet_wallet_isolated())
@@ -101,19 +140,20 @@ if __name__ == "__main__":
     # For standalone testing, call the synchronous generate_new_wallet_sync
     new_wallet = generate_new_wallet_sync()
     if "error" not in new_wallet:
-        print(f"New Wallet Address: {new_wallet["address"]}")
-        print(f"New Wallet Seed: {new_wallet["seed"]}")
+        print(f"New Wallet Address: {new_wallet['address']}")
+        print(f"New Wallet Seed: {new_wallet['seed']}")
+        print(f"Status: {new_wallet.get('message', 'Ready')}")
 
         print("\nGetting account info for the new wallet...")
-        account_info = get_account_info(new_wallet["address"])
+        account_info = get_account_info(new_wallet['address'])
         print(account_info)
 
         print("\nSetting a trustline (example for a hypothetical token)... ")
         try:
-            trustline_result = set_trustline(new_wallet["seed"], "USD", "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k3l3m3n")
+            trustline_result = set_trustline(new_wallet['seed'], "USD", "rP9jygWvBfR4q4b6v2W2b7x3f3g3h3i3j3k3l3m3n")
             print(trustline_result)
         except Exception as e:
             print(f"Error setting trustline: {e}")
     else:
-        print(f"Error: {new_wallet["error"]}")
+        print(f"Error: {new_wallet['error']}")
 
