@@ -152,13 +152,12 @@ async def view_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE,
         [InlineKeyboardButton("↩️ Back to Sniper Menu", callback_data="sniper_menu")],
     ]
     
-async def some_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     message_text = f"🎯 Sniper Config: {config.get('name', 'Unnamed')}\n\n"
     message_text += f"Status: {status_emoji}\n\n"
     message_text += f"📋 Configuration:\n"
-    message_text += f"  • Ticker: {config.get('target_ticker', 'Not Set')}\n"
-    message_text += f"  • Name: {config.get('target_name', 'Not Set')}\n"
+    message_text += f"  • Ticker: {config.get('ticker', 'Not Set')}\n"
+    message_text += f"  • Coin Name: {config.get('coin_name', 'Not Set')}\n"
     message_text += f"  • Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
     message_text += f"  • Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
     message_text += f"  • Slippage: {config.get('slippage', 'Not Set')}%\n"
@@ -646,7 +645,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         return
                     sniper.default_trade_settings.setdefault(user_id, {})["max_gas_fee"] = value
                 sniper.save_data()
-                await update.message.reply_text(f"✅ Default {field_name.replace("_", " ")} set!")
+                await update.message.reply_text(f"✅ Default {field_name.replace('_', ' ')} set!")
                 await buy_sell_settings(update, context)
         except ValueError:
             await update.message.reply_text("❌ Invalid input. Please enter a valid number.")
@@ -657,6 +656,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Handle callback queries for dynamic buttons
     if update.callback_query:
         query = update.callback_query
+        await query.answer()  # Answer immediately to remove loading state
         data = query.data
         
         if data == "start":
@@ -775,8 +775,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         elif data == "set_default_gas_fee":
             context.user_data["awaiting_input"] = "set_default_gas_fee"
             await query.edit_message_text("Please send the default max gas fee in XRP (e.g., 0.1, 0.5).")
-        else:
-            await query.answer()
 
     # Default message handler
     # await update.message.reply_text("I\\'m not sure what you mean. Use /start to see the menu.")
@@ -807,4 +805,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
