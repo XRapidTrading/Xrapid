@@ -116,3 +116,4 @@ if __name__ == "__main__":
             print(f"Error setting trustline: {e}")
     else:
         print(f"Error: {new_wallet["error"]}")
+
