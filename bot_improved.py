@@ -714,7 +714,7 @@ async def generate_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
     
     # Store wallet in sniper
-    sniper.set_wallet(user_id, wallet_data['seed'])
+    sniper.add_wallet(user_id, wallet_data['seed'])
     
     # Prepare success message
     funded_status = "✅ Funded" if wallet_data.get('funded', False) else "⚠️ Unfunded (please fund manually)"
@@ -772,7 +772,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     await update.message.reply_text(f"❌ Failed to import wallet: {wallet_data['error']}")
                 else:
                     # Store wallet in sniper
-                    sniper.set_wallet(user_id, seed)
+                    sniper.add_wallet(user_id, seed)
                     
                     message_text = f"✅ **Wallet Imported Successfully!**\n\n"
                     message_text += f"📍 **Address:** `{wallet_data['address']}`\n\n"
