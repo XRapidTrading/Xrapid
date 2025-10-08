@@ -104,13 +104,13 @@ async def show_sniper_config_editor(update: Update, context: ContextTypes.DEFAUL
     config = context.user_data.get("creating_sniper_config", {})
     
     keyboard = [
-        [InlineKeyboardButton(f"📝 Config Name: {config.get('name', 'Not Set')}", callback_data="edit_sniper_name")],
-        [InlineKeyboardButton(f"🎯 Target Currency: {config.get('target_currency', 'Not Set')}", callback_data="edit_target_currency")],
-        [InlineKeyboardButton(f"🏦 Target Issuer: {config.get('target_issuer', 'Not Set')[:20] + '...' if config.get('target_issuer') else 'Not Set'}", callback_data="edit_target_issuer")],
-        [InlineKeyboardButton(f"👤 Dev Wallet: {config.get('dev_wallet_address', 'Not Set')[:20] + '...' if config.get('dev_wallet_address') else 'Not Set'}", callback_data="edit_dev_wallet")],
-        [InlineKeyboardButton(f"💰 Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP", callback_data="edit_buy_amount")],
-        [InlineKeyboardButton(f"📉 Slippage: {config.get('slippage', 'Not Set')}%", callback_data="edit_slippage")],
-        [InlineKeyboardButton(f"⛽ Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP", callback_data="edit_max_gas_fee")],
+        [InlineKeyboardButton(f"📝 Config Name: {config.get(\'name\', \'Not Set\')}", callback_data="edit_sniper_name")],
+        [InlineKeyboardButton(f"🎯 Target Currency: {config.get(\'target_currency\', \'Not Set\')}", callback_data="edit_target_currency")],
+        [InlineKeyboardButton(f"🏦 Target Issuer: {config.get(\'target_issuer\', \'Not Set\')[:20] + \'...\' if config.get(\'target_issuer\') else \'Not Set\'}", callback_data="edit_target_issuer")],
+        [InlineKeyboardButton(f"👤 Dev Wallet: {config.get(\'dev_wallet_address\', \'Not Set\')[:20] + \'...\' if config.get(\'dev_wallet_address\') else \'Not Set\'}", callback_data="edit_dev_wallet")],
+        [InlineKeyboardButton(f"💰 Buy Amount: {config.get(\'buy_amount_xrp\', \'Not Set\')} XRP", callback_data="edit_buy_amount")],
+        [InlineKeyboardButton(f"📉 Slippage: {config.get(\'slippage\', \'Not Set\')}%", callback_data="edit_slippage")],
+        [InlineKeyboardButton(f"⛽ Max Gas Fee: {config.get(\'max_gas_fee\', \'Not Set\')} XRP", callback_data="edit_max_gas_fee")],
         [InlineKeyboardButton("✅ Save Config", callback_data="save_sniper_config")],
         [InlineKeyboardButton("❌ Cancel", callback_data="sniper_menu")],
     ]
@@ -118,13 +118,13 @@ async def show_sniper_config_editor(update: Update, context: ContextTypes.DEFAUL
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     message_text = "⚙️ Configure Your Sniper\n\n"
-    message_text += f"Name: {config.get('name', 'Not Set')}\n"
-    message_text += f"Target Currency: {config.get('target_currency', 'Not Set')}\n"
-    message_text += f"Target Issuer: {config.get('target_issuer', 'Not Set')}\n"
-    message_text += f"Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
-    message_text += f"Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
-    message_text += f"Slippage: {config.get('slippage', 'Not Set')}%\n"
-    message_text += f"Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP\n\n"
+    message_text += f"Name: {config.get(\'name\', \'Not Set\')}\n"
+    message_text += f"Target Currency: {config.get(\'target_currency\', \'Not Set\')}\n"
+    message_text += f"Target Issuer: {config.get(\'target_issuer\', \'Not Set\')}\n"
+    message_text += f"Dev Wallet: {config.get(\'dev_wallet_address\', \'Not Set\')}\n"
+    message_text += f"Buy Amount: {config.get(\'buy_amount_xrp\', \'Not Set\')} XRP\n"
+    message_text += f"Slippage: {config.get(\'slippage\', \'Not Set\')}%\n"
+    message_text += f"Max Gas Fee: {config.get(\'max_gas_fee\', \'Not Set\')} XRP\n\n"
     message_text += "Click on any field to edit it."
     
     if update.callback_query:
@@ -154,15 +154,15 @@ async def view_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE,
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    message_text = f"🎯 Sniper Config: {config.get('name', 'Unnamed')}\n\n"
+    message_text = f"🎯 Sniper Config: {config.get(\'name\', \'Unnamed\')}\n\n"
     message_text += f"Status: {status_emoji}\n\n"
     message_text += f"📋 Configuration:\n"
-    message_text += f"  • Target Currency: {config.get('target_currency', 'Not Set')}\n"
-    message_text += f"  • Target Issuer: {config.get('target_issuer', 'Not Set')}\n"
-    message_text += f"  • Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
-    message_text += f"  • Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
-    message_text += f"  • Slippage: {config.get('slippage', 'Not Set')}%\n"
-    message_text += f"  • Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP\n"
+    message_text += f"  • Target Currency: {config.get(\'target_currency\', \'Not Set\')}\n"
+    message_text += f"  • Target Issuer: {config.get(\'target_issuer\', \'Not Set\')}\n"
+    message_text += f"  • Dev Wallet: {config.get(\'dev_wallet_address\', \'Not Set\')}\n"
+    message_text += f"  • Buy Amount: {config.get(\'buy_amount_xrp\', \'Not Set\')} XRP\n"
+    message_text += f"  • Slippage: {config.get(\'slippage\', \'Not Set\')}%\n"
+    message_text += f"  • Max Gas Fee: {config.get(\'max_gas_fee\', \'Not Set\')} XRP\n"
     
     await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
 
@@ -203,7 +203,7 @@ async def save_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE)
     missing_fields = [field for field in required_fields if not config.get(field)]
     
     if missing_fields:
-        await update.callback_query.answer(f"Please set: {', '.join(missing_fields)}", show_alert=True)
+        await update.callback_query.answer(f"Please set: {\' , \'.join(missing_fields)}", show_alert=True)
         return
     
     # Save the config
@@ -242,6 +242,9 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     keyboard = [
         [InlineKeyboardButton("💼 Wallet Settings", callback_data="wallet_settings")],
         [InlineKeyboardButton("🛒 Default Buy/Sell Settings", callback_data="buy_sell_settings")],
+        [InlineKeyboardButton("🛡️ MEV Protection", callback_data="mev_protection_settings")],
+        [InlineKeyboardButton("➕ Buy Presets (XRP)", callback_data="buy_presets_menu")],
+        [InlineKeyboardButton("➖ Sell Presets (%)", callback_data="sell_presets_menu")],
         [InlineKeyboardButton("↩️ Back to Main Menu", callback_data="start")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -266,17 +269,101 @@ async def buy_sell_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     current_settings = sniper.default_trade_settings.get(user_id, {})
 
     keyboard = [
-        [InlineKeyboardButton(f"💲 Default Buy Amount: {current_settings.get('buy_amount_xrp', 'Not Set')} XRP", callback_data="set_default_buy_amount")],
-        [InlineKeyboardButton(f"📉 Default Slippage: {current_settings.get('slippage', 'Not Set')}%", callback_data="set_default_slippage")],
-        [InlineKeyboardButton(f"⛽ Default Gas Fee: {current_settings.get('max_gas_fee', 'Not Set')} XRP", callback_data="set_default_gas_fee")],
+        [InlineKeyboardButton(f"💲 Default Buy Amount: {current_settings.get(\'buy_amount_xrp\', \'Not Set\')} XRP", callback_data="set_default_buy_amount")],
+        [InlineKeyboardButton(f"📉 Default Slippage: {current_settings.get(\'slippage\', \'Not Set\')}%", callback_data="set_default_slippage")],
+        [InlineKeyboardButton(f"⛽ Default Gas Fee: {current_settings.get(\'max_gas_fee\', \'Not Set\')} XRP", callback_data="set_default_gas_fee")],
         [InlineKeyboardButton("↩️ Back to Settings", callback_data="settings_menu")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     message_text = "🛒 Default Buy/Sell Settings\n\nThese are your default settings for manual trading.\n(Sniper configs have their own separate settings)"
     await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
 
+async def mev_protection_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Displays MEV protection settings."""
+    user_id = update.effective_user.id
+    mev_enabled = sniper.get_mev_protection_status(user_id)
+    status_text = "✅ Enabled" if mev_enabled else "❌ Disabled"
+    toggle_text = "❌ Disable MEV Protection" if mev_enabled else "✅ Enable MEV Protection"
+
+    keyboard = [
+        [InlineKeyboardButton(f"MEV Protection Status: {status_text}", callback_data="noop")],
+        [InlineKeyboardButton(toggle_text, callback_data="toggle_mev_protection")],
+        [InlineKeyboardButton("↩️ Back to Settings", callback_data="settings_menu")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = "🛡️ MEV Protection\n\nMinimize front-running and sandwich attacks. Enabling this may slightly increase transaction latency."
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+async def toggle_mev_protection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Toggles MEV protection on/off."""
+    user_id = update.effective_user.id
+    current_status = sniper.get_mev_protection_status(user_id)
+    sniper.set_mev_protection(user_id, not current_status)
+    await update.callback_query.answer(f"MEV Protection {'enabled' if not current_status else 'disabled'}.")
+    await mev_protection_settings(update, context)
+
+async def buy_presets_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Displays buy presets and options to add/remove them."""
+    user_id = update.effective_user.id
+    presets = sniper.get_buy_presets(user_id)
+
+    keyboard = []
+    if presets:
+        keyboard.append([InlineKeyboardButton("Your Buy Presets (XRP):", callback_data="noop")])
+        for preset in presets:
+            keyboard.append([InlineKeyboardButton(f"{preset} XRP", callback_data=f"remove_buy_preset_{preset}")])
+    
+    keyboard.append([InlineKeyboardButton("➕ Add New Buy Preset", callback_data="add_buy_preset")],)
+    keyboard.append([InlineKeyboardButton("↩️ Back to Settings", callback_data="settings_menu")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = "➕ Buy Presets\n\nTap a preset to remove it. Add new presets in XRP amounts."
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+async def add_buy_preset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Prompts user to add a new buy preset."""
+    context.user_data["awaiting_input"] = "add_buy_preset"
+    await update.callback_query.edit_message_text("Please send the XRP amount for the new buy preset (e.g., 100, 500).")
+
+async def remove_buy_preset(update: Update, context: ContextTypes.DEFAULT_TYPE, amount_xrp: float) -> None:
+    """Removes a buy preset."""
+    user_id = update.effective_user.id
+    sniper.remove_buy_preset(user_id, amount_xrp)
+    await update.callback_query.answer(f"Buy preset {amount_xrp} XRP removed.")
+    await buy_presets_menu(update, context)
+
+async def sell_presets_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Displays sell presets and options to add/remove them."""
+    user_id = update.effective_user.id
+    presets = sniper.get_sell_presets(user_id)
+
+    keyboard = []
+    if presets:
+        keyboard.append([InlineKeyboardButton("Your Sell Presets (%):", callback_data="noop")])
+        for preset in presets:
+            keyboard.append([InlineKeyboardButton(f"{preset}%", callback_data=f"remove_sell_preset_{preset}")])
+    
+    keyboard.append([InlineKeyboardButton("➕ Add New Sell Preset", callback_data="add_sell_preset")])
+    keyboard.append([InlineKeyboardButton("↩️ Back to Settings", callback_data="settings_menu")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = "➖ Sell Presets\n\nTap a preset to remove it. Add new presets in percentage amounts."
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+async def add_sell_preset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Prompts user to add a new sell preset."""
+    context.user_data["awaiting_input"] = "add_sell_preset"
+    await update.callback_query.edit_message_text("Please send the percentage for the new sell preset (e.g., 25, 50, 100).")
+
+async def remove_sell_preset(update: Update, context: ContextTypes.DEFAULT_TYPE, percentage: int) -> None:
+    """Removes a sell preset."""
+    user_id = update.effective_user.id
+    sniper.remove_sell_preset(user_id, percentage)
+    await update.callback_query.answer(f"Sell preset {percentage}% removed.")
+    await sell_presets_menu(update, context)
+
 async def view_positions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Displays the user's current token holdings and provides options to buy/sell."""
+    """Displays the user\'s current token holdings and provides options to buy/sell."""
     user_id = update.effective_user.id
     wallet = sniper.wallets.get(user_id)
     if not wallet:
@@ -287,9 +374,9 @@ async def view_positions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text(message)
         return
 
-    account_info = get_account_info(wallet.classic_address)
+    account_info = sniper.get_account_info(wallet.classic_address)
     if "error" in account_info:
-        message = f"Could not retrieve account info: {account_info['error']}"
+        message = f"Could not retrieve account info: {account_info[\'error\']}"
         if update.callback_query:
             await update.callback_query.edit_message_text(message)
         else:
@@ -299,6 +386,7 @@ async def view_positions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     balances = account_info.get("account_data", {}).get("balances", [])
     message_text = f"💰 Your Positions\n\nWallet: {wallet.classic_address}\n\n"
 
+    keyboard = []
     if not balances:
         message_text += "No tokens held yet."
     else:
@@ -308,14 +396,18 @@ async def view_positions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 value = balance["value"]
                 issuer = balance.get("issuer", "")
                 if currency == "XRP":
-                    message_text += f"- XRP: {value} drops\n"
+                    message_text += f"- XRP: {float(value) / 1_000_000} XRP\n"
                 else:
-                    message_text += f"- {currency} ({issuer[:10]}...): {value}\n"
+                    message_text += f"- {currency} ({issuer[:4]}...{issuer[-4:]}): {value}\n"
+                    # Add buy/sell buttons for each token
+                    keyboard.append([
+                        InlineKeyboardButton(f"Buy {currency}", callback_data=f"buy_token_{currency}_{issuer}"),
+                        InlineKeyboardButton(f"Sell {currency}", callback_data=f"sell_token_{currency}_{issuer}")
+                    ])
 
-    keyboard = [
-        [InlineKeyboardButton("🔄 Refresh", callback_data="view_positions")],
-        [InlineKeyboardButton("↩️ Back to Positions Menu", callback_data="positions_menu")],
-    ]
+    keyboard.append([InlineKeyboardButton("🔄 Refresh", callback_data="view_positions")],)
+    keyboard.append([InlineKeyboardButton("↩️ Back to Positions Menu", callback_data="positions_menu")])
+    
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     if update.callback_query:
@@ -323,194 +415,370 @@ async def view_positions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await update.message.reply_text(message_text, reply_markup=reply_markup)
 
-async def generate_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles generating a new wallet."""
-    await update.callback_query.edit_message_text("Generating new wallet... This may take a moment.")
-    new_wallet_data = await context.application.loop.run_in_executor(None, generate_new_wallet_sync)
-    if "error" not in new_wallet_data:
-        sniper.add_wallet(update.effective_user.id, new_wallet_data)
-        await update.callback_query.edit_message_text(
-            f"✅ New wallet generated and funded (Testnet):\n\n"
-            f"Address: {new_wallet_data['address']}\n"
-            f"Seed: {new_wallet_data['seed']}\n\n"
-            f"⚠️ SAVE THIS SEED SAFELY!\n\n"
-            f"Your wallet is now set up. Use the menu to view details."
-        )
-    else:
-        await update.callback_query.edit_message_text(f"❌ Error generating wallet: {new_wallet_data['error']}")
+async def buy_token_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str) -> None:
+    """Displays buy options for a specific token."""
+    user_id = update.effective_user.id
+    buy_presets = sniper.get_buy_presets(user_id)
+    default_buy_amount = sniper.default_trade_settings.get(user_id, {}).get("buy_amount_xrp", "Not Set")
 
-async def import_wallet_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Prompts the user to enter their wallet seed."""
-    await update.callback_query.edit_message_text(
-        "Please reply with your wallet seed (sEd...) to import it.\n\n"
-        "⚠️ WARNING: Sharing your seed is risky. Only do this if you understand the risks."
-    )
-    context.user_data["awaiting_seed_input"] = True
+    keyboard = []
+    if buy_presets:
+        keyboard.append([InlineKeyboardButton("Buy Presets (XRP):", callback_data="noop")])
+        for preset in buy_presets:
+            keyboard.append([InlineKeyboardButton(f"{preset} XRP", callback_data=f"execute_buy_{currency}_{issuer}_{preset}")])
+    
+    keyboard.append([InlineKeyboardButton(f"Default Buy Amount ({default_buy_amount} XRP)", callback_data=f"execute_buy_{currency}_{issuer}_{default_buy_amount}")])
+    keyboard.append([InlineKeyboardButton("Custom Amount", callback_data=f"custom_buy_amount_{currency}_{issuer}")])
+    keyboard.append([InlineKeyboardButton("↩️ Back to Positions", callback_data="view_positions")])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = f"💰 Buy {currency} ({issuer[:4]}...{issuer[-4:]})\n\nChoose an amount to buy:"
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+async def custom_buy_amount(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str) -> None:
+    """Prompts user for a custom buy amount."""
+    context.user_data["awaiting_input"] = f"custom_buy_amount_{currency}_{issuer}"
+    await update.callback_query.edit_message_text(f"Please send the custom XRP amount to buy {currency} ({issuer[:4]}...{issuer[-4:]}).")
+
+async def execute_buy_order(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str, amount_xrp: float) -> None:
+    """Executes a buy order."""
+    user_id = update.effective_user.id
+    slippage = sniper.default_trade_settings.get(user_id, {}).get("slippage", 0.01) # Default slippage
+    mev_protect = sniper.get_mev_protection_status(user_id)
+
+    await update.callback_query.edit_message_text(f"Attempting to buy {amount_xrp} XRP worth of {currency}...")
+    success = await sniper._execute_buy_order(user_id, currency, issuer, amount_xrp, slippage, mev_protect)
+    
+    if success:
+        await update.callback_query.edit_message_text(f"✅ Successfully bought {currency}!")
+    else:
+        await update.callback_query.edit_message_text(f"❌ Failed to buy {currency}. Check logs for details.")
+    await asyncio.sleep(2) # Give user time to read message
+    await view_positions(update, context)
+
+async def sell_token_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str) -> None:
+    """Displays sell options for a specific token."""
+    user_id = update.effective_user.id
+    sell_presets = sniper.get_sell_presets(user_id)
+
+    keyboard = []
+    if sell_presets:
+        keyboard.append([InlineKeyboardButton("Sell Presets (% of holdings):", callback_data="noop")])
+        for preset in sell_presets:
+            keyboard.append([InlineKeyboardButton(f"{preset}%", callback_data=f"execute_sell_{currency}_{issuer}_{preset}")])
+    
+    keyboard.append([InlineKeyboardButton("Custom Percentage", callback_data=f"custom_sell_percentage_{currency}_{issuer}")])
+    keyboard.append([InlineKeyboardButton("↩️ Back to Positions", callback_data="view_positions")])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message_text = f"➖ Sell {currency} ({issuer[:4]}...{issuer[-4:]})\n\nChoose a percentage of your holdings to sell:"
+    await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+
+async def custom_sell_percentage(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str) -> None:
+    """Prompts user for a custom sell percentage."""
+    context.user_data["awaiting_input"] = f"custom_sell_percentage_{currency}_{issuer}"
+    await update.callback_query.edit_message_text(f"Please send the custom percentage (1-100) of {currency} ({issuer[:4]}...{issuer[-4:]}) to sell.")
+
+async def execute_sell_order(update: Update, context: ContextTypes.DEFAULT_TYPE, currency: str, issuer: str, percentage: int) -> None:
+    """Executes a sell order."""
+    user_id = update.effective_user.id
+
+    await update.callback_query.edit_message_text(f"Attempting to sell {percentage}% of {currency}...")
+    success = await sniper._execute_sell_order(user_id, currency, issuer, percentage)
+    
+    if success:
+        await update.callback_query.edit_message_text(f"✅ Successfully sold {percentage}% of {currency}!")
+    else:
+        await update.callback_query.edit_message_text(f"❌ Failed to sell {currency}. Check logs for details.")
+    await asyncio.sleep(2) # Give user time to read message
+    await view_positions(update, context)
 
 async def my_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Displays the user's connected wallet details."""
+    """Displays the user's wallet address and current XRP balance."""
     user_id = update.effective_user.id
     wallet = sniper.wallets.get(user_id)
-    if wallet:
-        account_info = get_account_info(wallet.classic_address)
-        if "error" not in account_info:
-            message = (
-                f"💼 Your Wallet\n\n"
-                f"Address: {wallet.classic_address}\n"
-                f"XRP Balance: {account_info.get('account_data', {}).get('Balance')} drops\n\n"
-                f"(Seed is kept confidential)"
-            )
+
+    if not wallet:
+        message = "No wallet configured. Please generate or import a wallet."
+        if update.callback_query:
+            await update.callback_query.edit_message_text(message)
         else:
-            message = f"Could not retrieve account info: {account_info['error']}"
-    else:
-        message = "No wallet configured. Use the menu to add one."
+            await update.message.reply_text(message)
+        return
+
+    account_info = sniper.get_account_info(wallet.classic_address)
+    if "error" in account_info:
+        message = f"Could not retrieve account info: {account_info[\'error\']}"
+        if update.callback_query:
+            await update.callback_query.edit_message_text(message)
+        else:
+            await update.message.reply_text(message)
+        return
+
+    xrp_balance = float(account_info.get("account_data", {}).get("Balance", 0)) / 1_000_000
+    message_text = f"💼 Your Wallet\n\nAddress: `{wallet.classic_address}`\nSeed: `{wallet.seed}`\n\nXRP Balance: {xrp_balance} XRP\n\n⚠️ Keep your seed safe! Do not share it with anyone."
+
+    keyboard = [
+        [InlineKeyboardButton("↩️ Back to Wallet Settings", callback_data="wallet_settings")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
     if update.callback_query:
-        await update.callback_query.edit_message_text(message)
+        await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode="MarkdownV2")
     else:
-        await update.message.reply_text(message)
-
-# Prompt handlers for editing sniper config fields
-async def prompt_edit_field(update: Update, context: ContextTypes.DEFAULT_TYPE, field_name: str, prompt_text: str) -> None:
-    """Generic function to prompt user for field input."""
-    await update.callback_query.edit_message_text(prompt_text)
-    context.user_data["editing_field"] = field_name
-
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles button presses from inline keyboards."""
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "start":
-        await start(update, context)
-    elif query.data == "positions_menu":
-        await positions_menu(update, context)
-    elif query.data == "sniper_menu":
-        await sniper_menu(update, context)
-    elif query.data == "settings_menu":
-        await settings_menu(update, context)
-    elif query.data == "wallet_settings":
-        await wallet_settings(update, context)
-    elif query.data == "buy_sell_settings":
-        await buy_sell_settings(update, context)
-    elif query.data == "generate_wallet":
-        await generate_wallet(update, context)
-    elif query.data == "import_wallet":
-        await import_wallet_prompt(update, context)
-    elif query.data == "my_wallet":
-        await my_wallet(update, context)
-    elif query.data == "view_positions":
-        await view_positions(update, context)
-    elif query.data == "create_new_sniper_config":
-        await create_new_sniper_config(update, context)
-    elif query.data == "save_sniper_config":
-        await save_sniper_config(update, context)
-    elif query.data.startswith("view_sniper_config_"):
-        config_id = query.data.replace("view_sniper_config_", "")
-        await view_sniper_config(update, context, config_id)
-    elif query.data.startswith("toggle_sniper_"):
-        config_id = query.data.replace("toggle_sniper_", "")
-        await toggle_sniper_config(update, context, config_id)
-    elif query.data.startswith("delete_sniper_config_"):
-        config_id = query.data.replace("delete_sniper_config_", "")
-        await delete_sniper_config(update, context, config_id)
-    elif query.data.startswith("edit_sniper_config_"):
-        config_id = query.data.replace("edit_sniper_config_", "")
-        await edit_sniper_config(update, context, config_id)
-    elif query.data == "edit_sniper_name":
-        await prompt_edit_field(update, context, "name", "Enter a name for this sniper config:")
-    elif query.data == "edit_target_currency":
-        await prompt_edit_field(update, context, "target_currency", "Enter the target currency code (e.g., USD, BTC):")
-    elif query.data == "edit_target_issuer":
-        await prompt_edit_field(update, context, "target_issuer", "Enter the target issuer address:")
-    elif query.data == "edit_dev_wallet":
-        await prompt_edit_field(update, context, "dev_wallet_address", "Enter the developer wallet address:")
-    elif query.data == "edit_buy_amount":
-        await prompt_edit_field(update, context, "buy_amount_xrp", "Enter the buy amount in XRP:")
-    elif query.data == "edit_slippage":
-        await prompt_edit_field(update, context, "slippage", "Enter the slippage percentage (e.g., 0.5 for 0.5%):")
-    elif query.data == "edit_max_gas_fee":
-        await prompt_edit_field(update, context, "max_gas_fee", "Enter the maximum gas fee in XRP:")
-    elif query.data == "set_default_buy_amount":
-        await prompt_edit_field(update, context, "default_buy_amount_xrp", "Enter the default buy amount in XRP:")
-    elif query.data == "set_default_slippage":
-        await prompt_edit_field(update, context, "default_slippage", "Enter the default slippage percentage:")
-    elif query.data == "set_default_gas_fee":
-        await prompt_edit_field(update, context, "default_max_gas_fee", "Enter the default max gas fee in XRP:")
-    elif query.data == "noop":
-        pass  # Do nothing for header buttons
+        await update.message.reply_markdown_v2(message_text, reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle regular text messages for various inputs."""
+    """Handles incoming text messages, especially for awaiting input."""
     user_id = update.effective_user.id
     message_text = update.message.text
+    awaiting_input = context.user_data.get("awaiting_input")
 
-    # Handle wallet seed import
-    if context.user_data.get("awaiting_seed_input"):
-        seed = message_text.strip()
+    if awaiting_input:
         try:
-            imported_wallet = import_wallet(seed)
-            if "error" not in imported_wallet:
-                sniper.add_wallet(user_id, imported_wallet)
-                await update.message.reply_text(
-                    f"✅ Wallet imported successfully!\n\nAddress: {imported_wallet['address']}"
-                )
-            else:
-                await update.message.reply_text(f"❌ Error importing wallet: {imported_wallet['error']}")
-        except Exception as e:
-            await update.message.reply_text(f"❌ An unexpected error occurred: {e}")
-        finally:
-            context.user_data["awaiting_seed_input"] = False
-        return
-
-    # Handle sniper config field editing
-    if context.user_data.get("editing_field"):
-        field_name = context.user_data["editing_field"]
-        config = context.user_data.get("creating_sniper_config")
-        
-        if not config:
-            await update.message.reply_text("❌ No config being edited. Please start over.")
-            context.user_data.pop("editing_field", None)
-            return
-        
-        # Process the input based on field type
-        try:
-            if field_name in ["buy_amount_xrp", "slippage", "max_gas_fee", "default_buy_amount_xrp", "default_slippage", "default_max_gas_fee"]:
-                # Numeric fields
-                value = float(message_text.strip())
-                
-                if field_name.startswith("default_"):
-                    # Update default settings
-                    actual_field = field_name.replace("default_", "")
-                    if user_id not in sniper.default_trade_settings:
-                        sniper.default_trade_settings[user_id] = {}
-                    sniper.default_trade_settings[user_id][actual_field] = value
-                    sniper.save_data()
-                    await update.message.reply_text(f"✅ Default {actual_field} set to: {value}")
-                    # Return to settings menu
-                    keyboard = [[InlineKeyboardButton("↩️ Back to Settings", callback_data="buy_sell_settings")]]
-                    await update.message.reply_text("Done!", reply_markup=InlineKeyboardMarkup(keyboard))
-                else:
-                    config[field_name] = value
-                    await update.message.reply_text(f"✅ {field_name} set to: {value}")
+            if awaiting_input == "add_buy_preset":
+                amount = float(message_text)
+                if amount <= 0:
+                    await update.message.reply_text("Amount must be positive.")
+                    return
+                sniper.add_buy_preset(user_id, amount)
+                await update.message.reply_text(f"✅ Buy preset {amount} XRP added!")
+                await buy_presets_menu(update, context)
+            elif awaiting_input == "add_sell_preset":
+                percentage = int(message_text)
+                if not (1 <= percentage <= 100):
+                    await update.message.reply_text("Percentage must be between 1 and 100.")
+                    return
+                sniper.add_sell_preset(user_id, percentage)
+                await update.message.reply_text(f"✅ Sell preset {percentage}% added!")
+                await sell_presets_menu(update, context)
+            elif awaiting_input.startswith("custom_buy_amount_"):
+                parts = awaiting_input.split("_")
+                currency = parts[2]
+                issuer = parts[3]
+                amount = float(message_text)
+                if amount <= 0:
+                    await update.message.reply_text("Amount must be positive.")
+                    return
+                await update.message.reply_text(f"Buying {amount} XRP worth of {currency}...")
+                await execute_buy_order(update, context, currency, issuer, amount)
+            elif awaiting_input.startswith("custom_sell_percentage_"):
+                parts = awaiting_input.split("_")
+                currency = parts[2]
+                issuer = parts[3]
+                percentage = int(message_text)
+                if not (1 <= percentage <= 100):
+                    await update.message.reply_text("Percentage must be between 1 and 100.")
+                    return
+                await update.message.reply_text(f"Selling {percentage}% of {currency}...")
+                await execute_sell_order(update, context, currency, issuer, percentage)
+            elif awaiting_input == "edit_sniper_name":
+                config = context.user_data.get("creating_sniper_config")
+                if config:
+                    config["name"] = message_text.strip()
+                    await update.message.reply_text("✅ Config name set!")
                     await show_sniper_config_editor(update, context)
-            else:
-                # Text fields
-                if field_name.startswith("default_"):
-                    await update.message.reply_text("❌ Invalid field for text input")
-                else:
-                    config[field_name] = message_text.strip()
-                    await update.message.reply_text(f"✅ {field_name} set!")
+            elif awaiting_input == "edit_target_currency":
+                config = context.user_data.get("creating_sniper_config")
+                if config:
+                    config["target_currency"] = message_text.strip().upper()
+                    await update.message.reply_text("✅ Target currency set!")
                     await show_sniper_config_editor(update, context)
+            elif awaiting_input == "edit_target_issuer":
+                config = context.user_data.get("creating_sniper_config")
+                if config:
+                    config["target_issuer"] = message_text.strip()
+                    await update.message.reply_text("✅ Target issuer set!")
+                    await show_sniper_config_editor(update, context)
+            elif awaiting_input == "edit_dev_wallet":
+                config = context.user_data.get("creating_sniper_config")
+                if config:
+                    config["dev_wallet_address"] = message_text.strip()
+                    await update.message.reply_text("✅ Dev wallet set!")
+                    await show_sniper_config_editor(update, context)
+            elif awaiting_input == "edit_buy_amount":
+                config = context.user_data.get("creating_sniper_config")
+                if config:
+                    amount = float(message_text)
+                    if amount <= 0:
+                        await update.message.reply_text("Buy amount must be positive.")
+                        return
+                    config["buy_amount_xrp"] = amount
+                    await update.message.reply_text("✅ Buy amount set!")
+                    await show_sniper_config_editor(update, context)
+            elif awaiting_input == "edit_slippage":
+                config = context.user_data.get("creating_sniper_config")
+                if config:
+                    slippage = float(message_text)
+                    if not (0 <= slippage <= 100):
+                        await update.message.reply_text("Slippage must be between 0 and 100.")
+                        return
+                    config["slippage"] = slippage
+                    await update.message.reply_text("✅ Slippage set!")
+                    await show_sniper_config_editor(update, context)
+            elif awaiting_input == "edit_max_gas_fee":
+                config = context.user_data.get("creating_sniper_config")
+                if config:
+                    gas_fee = float(message_text)
+                    if gas_fee < 0:
+                        await update.message.reply_text("Gas fee cannot be negative.")
+                        return
+                    config["max_gas_fee"] = gas_fee
+                    await update.message.reply_text("✅ Max Gas Fee set!")
+                    await show_sniper_config_editor(update, context)
+            elif awaiting_input.startswith("set_default_"):
+                field_name = awaiting_input.replace("set_default_", "")
+                value = float(message_text)
+                if field_name == "buy_amount":
+                    if value <= 0:
+                        await update.message.reply_text("Buy amount must be positive.")
+                        return
+                    sniper.default_trade_settings.setdefault(user_id, {})["buy_amount_xrp"] = value
+                elif field_name == "slippage":
+                    if not (0 <= value <= 100):
+                        await update.message.reply_text("Slippage must be between 0 and 100.")
+                        return
+                    sniper.default_trade_settings.setdefault(user_id, {})["slippage"] = value
+                elif field_name == "gas_fee":
+                    if value < 0:
+                        await update.message.reply_text("Gas fee cannot be negative.")
+                        return
+                    sniper.default_trade_settings.setdefault(user_id, {})["max_gas_fee"] = value
+                sniper.save_data()
+                await update.message.reply_text(f"✅ Default {field_name.replace("_", " ")} set!")
+                await buy_sell_settings(update, context)
         except ValueError:
             await update.message.reply_text("❌ Invalid input. Please enter a valid number.")
-            return
         finally:
-            context.user_data.pop("editing_field", None)
+            context.user_data.pop("awaiting_input", None)
         return
 
+    # Handle callback queries for dynamic buttons
+    if update.callback_query:
+        query = update.callback_query
+        data = query.data
+        
+        if data == "start":
+            await start(update, context)
+        elif data == "positions_menu":
+            await positions_menu(update, context)
+        elif data == "sniper_menu":
+            await sniper_menu(update, context)
+        elif data == "settings_menu":
+            await settings_menu(update, context)
+        elif data == "wallet_settings":
+            await wallet_settings(update, context)
+        elif data == "buy_sell_settings":
+            await buy_sell_settings(update, context)
+        elif data == "mev_protection_settings":
+            await mev_protection_settings(update, context)
+        elif data == "toggle_mev_protection":
+            await toggle_mev_protection(update, context)
+        elif data == "buy_presets_menu":
+            await buy_presets_menu(update, context)
+        elif data == "add_buy_preset":
+            await add_buy_preset(update, context)
+        elif data.startswith("remove_buy_preset_"):
+            amount = float(data.replace("remove_buy_preset_", ""))
+            await remove_buy_preset(update, context, amount)
+        elif data == "sell_presets_menu":
+            await sell_presets_menu(update, context)
+        elif data == "add_sell_preset":
+            await add_sell_preset(update, context)
+        elif data.startswith("remove_sell_preset_"):
+            percentage = int(data.replace("remove_sell_preset_", ""))
+            await remove_sell_preset(update, context, percentage)
+        elif data == "generate_wallet":
+            await generate_wallet(update, context)
+        elif data == "import_wallet":
+            await import_wallet_start(update, context)
+        elif data == "my_wallet":
+            await my_wallet(update, context)
+        elif data == "view_positions":
+            await view_positions(update, context)
+        elif data.startswith("buy_token_"):
+            parts = data.split("_")
+            currency = parts[2]
+            issuer = parts[3]
+            await buy_token_menu(update, context, currency, issuer)
+        elif data.startswith("sell_token_"):
+            parts = data.split("_")
+            currency = parts[2]
+            issuer = parts[3]
+            await sell_token_menu(update, context, currency, issuer)
+        elif data.startswith("execute_buy_"):
+            parts = data.split("_")
+            currency = parts[2]
+            issuer = parts[3]
+            amount_xrp = float(parts[4])
+            await execute_buy_order(update, context, currency, issuer, amount_xrp)
+        elif data.startswith("custom_buy_amount_"):
+            parts = data.split("_")
+            currency = parts[2]
+            issuer = parts[3]
+            await custom_buy_amount(update, context, currency, issuer)
+        elif data.startswith("execute_sell_"):
+            parts = data.split("_")
+            currency = parts[2]
+            issuer = parts[3]
+            percentage = int(parts[4])
+            await execute_sell_order(update, context, currency, issuer, percentage)
+        elif data.startswith("custom_sell_percentage_"):
+            parts = data.split("_")
+            currency = parts[2]
+            issuer = parts[3]
+            await custom_sell_percentage(update, context, currency, issuer)
+        elif data == "create_new_sniper_config":
+            await create_new_sniper_config(update, context)
+        elif data.startswith("view_sniper_config_"):
+            config_id = data.replace("view_sniper_config_", "")
+            await view_sniper_config(update, context, config_id)
+        elif data.startswith("toggle_sniper_"):
+            config_id = data.replace("toggle_sniper_", "")
+            await toggle_sniper_config(update, context, config_id)
+        elif data.startswith("edit_sniper_config_"):
+            config_id = data.replace("edit_sniper_config_", "")
+            await edit_sniper_config(update, context, config_id)
+        elif data.startswith("delete_sniper_config_"):
+            config_id = data.replace("delete_sniper_config_", "")
+            await delete_sniper_config(update, context, config_id)
+        elif data == "save_sniper_config":
+            await save_sniper_config(update, context)
+        elif data == "edit_sniper_name":
+            context.user_data["awaiting_input"] = "edit_sniper_name"
+            await query.edit_message_text("Please send the new name for this sniper config.")
+        elif data == "edit_target_currency":
+            context.user_data["awaiting_input"] = "edit_target_currency"
+            await query.edit_message_text("Please send the target currency code (e.g., USD, BTC, MYTOKEN).")
+        elif data == "edit_target_issuer":
+            context.user_data["awaiting_input"] = "edit_target_issuer"
+            await query.edit_message_text("Please send the target issuer address.")
+        elif data == "edit_dev_wallet":
+            context.user_data["awaiting_input"] = "edit_dev_wallet"
+            await query.edit_message_text("Please send the developer wallet address to monitor.")
+        elif data == "edit_buy_amount":
+            context.user_data["awaiting_input"] = "edit_buy_amount"
+            await query.edit_message_text("Please send the buy amount in XRP (e.g., 100, 500).")
+        elif data == "edit_slippage":
+            context.user_data["awaiting_input"] = "edit_slippage"
+            await query.edit_message_text("Please send the slippage percentage (e.g., 1, 5).")
+        elif data == "edit_max_gas_fee":
+            context.user_data["awaiting_input"] = "edit_max_gas_fee"
+            await query.edit_message_text("Please send the maximum gas fee in XRP (e.g., 0.1, 0.5).")
+        elif data == "set_default_buy_amount":
+            context.user_data["awaiting_input"] = "set_default_buy_amount"
+            await query.edit_message_text("Please send the default buy amount in XRP (e.g., 100, 500).")
+        elif data == "set_default_slippage":
+            context.user_data["awaiting_input"] = "set_default_slippage"
+            await query.edit_message_text("Please send the default slippage percentage (e.g., 1, 5).")
+        elif data == "set_default_gas_fee":
+            context.user_data["awaiting_input"] = "set_default_gas_fee"
+            await query.edit_message_text("Please send the default max gas fee in XRP (e.g., 0.1, 0.5).")
+        else:
+            await query.answer()
+
     # Default message handler
-    await update.message.reply_text("I'm not sure what you mean. Use /start to see the menu.")
+    # await update.message.reply_text("I\'m not sure what you mean. Use /start to see the menu.")
 
 async def post_init(application: Application) -> None:
     """Runs once after the bot is started and before polling starts."""
@@ -529,7 +797,7 @@ def main() -> None:
     application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
 
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(CallbackQueryHandler(handle_message))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     logger.info("Application started")
