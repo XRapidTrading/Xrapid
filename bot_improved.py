@@ -88,8 +88,8 @@ async def create_new_sniper_config(update: Update, context: ContextTypes.DEFAULT
     context.user_data["creating_sniper_config"] = {
         "config_id": config_id,
         "name": "New Sniper Config",
-        "target_currency": None,
-        "target_issuer": None,
+        "ticker": None,
+        "coin_name": None,
         "dev_wallet_address": None,
         "buy_amount_xrp": None,
         "slippage": None,
@@ -105,8 +105,8 @@ async def show_sniper_config_editor(update: Update, context: ContextTypes.DEFAUL
     
     keyboard = [
         [InlineKeyboardButton(f"📝 Config Name: {config.get('name', 'Not Set')}", callback_data="edit_sniper_name")],
-        [InlineKeyboardButton(f"🎯 Target Currency: {config.get('target_currency', 'Not Set')}", callback_data="edit_target_currency")],
-        [InlineKeyboardButton(f"🏦 Target Issuer: {config.get('target_issuer', 'Not Set')[:20] + '...' if config.get('target_issuer') else 'Not Set'}", callback_data="edit_target_issuer")],
+        [InlineKeyboardButton(f"🎯 Ticker: {config.get('ticker', 'Not Set')}", callback_data="edit_ticker")],
+        [InlineKeyboardButton(f"🏦 Coin Name: {config.get('coin_name', 'Not Set')[:20] + '...' if config.get('coin_name') else 'Not Set'}", callback_data="edit_coin_name")],
         [InlineKeyboardButton(f"👤 Dev Wallet: {config.get('dev_wallet_address', 'Not Set')[:20] + '...' if config.get('dev_wallet_address') else 'Not Set'}", callback_data="edit_dev_wallet")],
         [InlineKeyboardButton(f"💰 Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP", callback_data="edit_buy_amount")],
         [InlineKeyboardButton(f"📉 Slippage: {config.get('slippage', 'Not Set')}%", callback_data="edit_slippage")],
@@ -119,8 +119,8 @@ async def show_sniper_config_editor(update: Update, context: ContextTypes.DEFAUL
     
     message_text = "⚙️ Configure Your Sniper\n\n"
     message_text += f"Name: {config.get('name', 'Not Set')}\n"
-    message_text += f"Target Currency: {config.get('target_currency', 'Not Set')}\n"
-    message_text += f"Target Issuer: {config.get('target_issuer', 'Not Set')}\n"
+    message_text += f"Ticker: {config.get('ticker', 'Not Set')}\n"
+    message_text += f"Coin Name: {config.get('coin_name', 'Not Set')}\n"
     message_text += f"Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
     message_text += f"Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
     message_text += f"Slippage: {config.get('slippage', 'Not Set')}%\n"
@@ -157,13 +157,12 @@ async def view_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE,
     message_text = f"🎯 Sniper Config: {config.get('name', 'Unnamed')}\n\n"
     message_text += f"Status: {status_emoji}\n\n"
     message_text += f"📋 Configuration:\n"
-    message_text += f"  • Target Currency: {config.get('target_currency', 'Not Set')}\n"
-    message_text += f"  • Target Issuer: {config.get('target_issuer', 'Not Set')}\n"
-    message_text += f"  • Dev Wallet: {config.get('dev_wallet_address', 'Not Set')}\n"
-    message_text += f"  • Buy Amount: {config.get('buy_amount_xrp', 'Not Set')} XRP\n"
-    message_text += f"  • Slippage: {config.get('slippage', 'Not Set')}%\n"
-    message_text += f"  • Max Gas Fee: {config.get('max_gas_fee', 'Not Set')} XRP\n"
-    
+    message_text += f"  • Ticker: {config.get(\'ticker\', \'Not Set\')}\n"
+    message_text += f"  • Coin Name: {config.get(\'coin_name\', \'Not Set\')}\n"
+    message_text += f"  • Dev Wallet: {config.get(\'dev_wallet_address\', \'Not Set\')}\n"
+    message_text += f"  • Buy Amount: {config.get(\'buy_amount_xrp\', \'Not Set\')} XRP\n"
+    message_text += f"  • Slippage: {config.get(\'slippage\', \'Not Set\')}%\n"
+    message_text += f"  • Max Gas Fee: {config.get(\'max_gas_fee\', \'Not Set\')} XRP\n"
     await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
 
 async def toggle_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE, config_id: str) -> None:
@@ -199,7 +198,7 @@ async def save_sniper_config(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     
     # Validate required fields
-    required_fields = ["target_currency", "buy_amount_xrp", "slippage"]
+    required_fields = ["ticker", "coin_name", "buy_amount_xrp", "slippage"]
     missing_fields = [field for field in required_fields if not config.get(field)]
     
     if missing_fields:
@@ -579,18 +578,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     config["name"] = message_text.strip()
                     await update.message.reply_text("✅ Config name set!")
                     await show_sniper_config_editor(update, context)
-            elif awaiting_input == "edit_target_currency":
+            elif awaiting_input == "edit_ticker":
                 config = context.user_data.get("creating_sniper_config")
                 if config:
-                    config["target_currency"] = message_text.strip().upper()
-                    await update.message.reply_text("✅ Target currency set!")
+                    config["ticker"] = message_text.strip().upper()
+                    await update.message.reply_text("✅ Ticker set!")
                     await show_sniper_config_editor(update, context)
-            elif awaiting_input == "edit_target_issuer":
+            elif awaiting_input == "edit_coin_name":
                 config = context.user_data.get("creating_sniper_config")
                 if config:
-                    config["target_issuer"] = message_text.strip()
-                    await update.message.reply_text("✅ Target issuer set!")
+                    config["coin_name"] = message_text.strip()
+                    await update.message.reply_text("✅ Coin name set!")
                     await show_sniper_config_editor(update, context)
+
             elif awaiting_input == "edit_dev_wallet":
                 config = context.user_data.get("creating_sniper_config")
                 if config:
@@ -748,12 +748,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         elif data == "edit_sniper_name":
             context.user_data["awaiting_input"] = "edit_sniper_name"
             await query.edit_message_text("Please send the new name for this sniper config.")
-        elif data == "edit_target_currency":
-            context.user_data["awaiting_input"] = "edit_target_currency"
-            await query.edit_message_text("Please send the target currency code (e.g., USD, BTC, MYTOKEN).")
-        elif data == "edit_target_issuer":
-            context.user_data["awaiting_input"] = "edit_target_issuer"
-            await query.edit_message_text("Please send the target issuer address.")
+        elif data == "edit_ticker":
+            context.user_data["awaiting_input"] = "edit_ticker"
+            await query.edit_message_text("Please send the ticker (e.g., USD, BTC, MYTOKEN).")
+        elif data == "edit_coin_name":
+            context.user_data["awaiting_input"] = "edit_coin_name"
+            await query.edit_message_text("Please send the coin name (e.g., USD, BTC, MYTOKEN) or the issuer address if it's a custom token.")
         elif data == "edit_dev_wallet":
             context.user_data["awaiting_input"] = "edit_dev_wallet"
             await query.edit_message_text("Please send the developer wallet address to monitor.")
