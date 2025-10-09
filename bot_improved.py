@@ -697,7 +697,7 @@ async def generate_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     # Show loading message
     if update.callback_query:
-        await update.callback_query.edit_message_text("⏳ Generating wallet... This may take up to 3 minutes if using the faucet.\n\nPlease wait...")
+        await update.callback_query.edit_message_text("⏳ Generating wallet...\n\nPlease wait...")
     
     # Import the async function directly
     from xrpl_client import _async_generate_faucet_wallet_isolated
@@ -713,8 +713,8 @@ async def generate_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await update.message.reply_text(error_message)
         return
     
-    # Store wallet in sniper
-    sniper.add_wallet(user_id, wallet_data['seed'])
+    # Store wallet in sniper (pass the whole dict)
+    sniper.add_wallet(user_id, wallet_data)
     
     # Prepare success message
     funded_status = "✅ Funded" if wallet_data.get('funded', False) else "⚠️ Unfunded (please fund manually)"
@@ -771,8 +771,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 if "error" in wallet_data:
                     await update.message.reply_text(f"❌ Failed to import wallet: {wallet_data['error']}")
                 else:
-                    # Store wallet in sniper
-                    sniper.add_wallet(user_id, seed)
+                    # Store wallet in sniper (pass the whole dict)
+                    sniper.add_wallet(user_id, wallet_data)
                     
                     message_text = f"✅ **Wallet Imported Successfully!**\n\n"
                     message_text += f"📍 **Address:** `{wallet_data['address']}`\n\n"
