@@ -106,7 +106,8 @@ class XRPSniper:
 
     def add_wallet(self, user_id: int, wallet_data: dict):
         """Adds a wallet to the sniper bot for a specific user."""
-        self.wallets[user_id] = Wallet(wallet_data["seed"], 0)
+        # Use seed keyword argument for Wallet constructor
+        self.wallets[user_id] = Wallet(seed=wallet_data["seed"], sequence=0)
         self.save_data()
         logger.info(f"Wallet added for user {user_id}: {self.wallets[user_id].classic_address}")
 
