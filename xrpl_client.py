@@ -43,51 +43,13 @@ def generate_wallet_locally():
         return {"error": f"Failed to generate wallet: {e}"}
 
 async def _async_generate_faucet_wallet_isolated():
-    """Isolated async function to generate and fund a wallet from the faucet."""
-    try:
-        # Try to get a faucet-funded wallet with retries
-        for attempt in range(3):
-            try:
-                logger.info(f"Attempting to get faucet wallet (attempt {attempt + 1}/3)...")
-                # Properly await the async generate_faucet_wallet function
-                test_wallet = await asyncio.wait_for(
-                    generate_faucet_wallet(client, debug=False), 
-                    timeout=60
-                )
-                return {
-                    "address": test_wallet.classic_address,
-                    "seed": test_wallet.seed,
-                    "public_key": test_wallet.public_key,
-                    "private_key": test_wallet.private_key,
-                    "funded": True,
-                    "message": "Wallet generated and funded from faucet!"
-                }
-            except asyncio.TimeoutError:
-                logger.warning(f"Faucet attempt {attempt + 1} timed out")
-                if attempt < 2:
-                    await asyncio.sleep(3)
-                    continue
-                # If all attempts fail, generate locally
-                logger.warning("All faucet attempts failed, generating local wallet instead")
-                local_wallet = generate_wallet_locally()
-                local_wallet["message"] = "⚠️ Faucet unavailable. Wallet generated locally - please fund manually."
-                return local_wallet
-            except Exception as e:
-                logger.error(f"Faucet attempt {attempt + 1} error: {e}")
-                if attempt < 2:
-                    await asyncio.sleep(3)
-                    continue
-                # If all attempts fail, generate locally
-                logger.warning("All faucet attempts failed, generating local wallet instead")
-                local_wallet = generate_wallet_locally()
-                local_wallet["message"] = f"⚠️ Faucet error: {str(e)}. Wallet generated locally - please fund manually."
-                return local_wallet
-    except Exception as e:
-        logger.error(f"Unexpected faucet error: {e}, falling back to local generation")
-        # Fallback to local generation
-        local_wallet = generate_wallet_locally()
-        local_wallet["message"] = f"⚠️ Unexpected error. Wallet generated locally - please fund manually."
-        return local_wallet
+    """
+    Generate wallet - simplified version.
+    Just generates locally since testnet faucet is unreliable.
+    For mainnet, users will fund their own wallets anyway.
+    """
+    logger.info("Generating new wallet...")
+    return generate_wallet_locally()
 
 def generate_new_wallet_sync():
     """
